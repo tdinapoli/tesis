@@ -43,8 +43,7 @@ class TTL:
 
         def __setattr__(self, pin_name, value):
             if pin_name in pin_map:
-                if 
-
+                pass
 
     def set_pin(self, column: str, pin_number: int, io: str):
         return self.gpio(column, pin_number, io)
@@ -54,19 +53,24 @@ class TTL:
             col, pin_number, io = pins_dict[pin]
             set_pin(col, pin_number, io)
 class Motor:
-    def __init__(self, motor_driver):
-        self.motor_driver = motor_driver
+    def __init__(self, driver):
+        self.driver = driver
 
-    def rotate(self, angle: float, ):
-        self.direction_pin.write(direction)
+    def rotate(self, angle: float, direction: str):
+        self.driver.direction = direction
 
-    def step(self, direction):
-        pass
+class Spectrometer:
+    def __init__(self, motor):
+        self.motor = motor
 
+    def set_wavelength(self, wavelength: float):
+        angle = self._angle_from_wl(wavelength)
+        self.motor.rotate(angle)
 
-
+    def _angle_from_wl(self, wavelength: float):
+        raise NotImplementedError
 
 if __name__ == "__main__":
-    myttl = TTL()
-    myttl.step = True -> self.step.write(True)
+    #myttl = TTL()
+    pass
 

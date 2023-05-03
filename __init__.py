@@ -24,9 +24,6 @@ class A4988:
     def set_mode(self, mode: int):
         pass
 
-    def set_mode(self, mode: int):
-        pass
-
 
 class TTL:
     def __init__(self, GPIO, pins_dict: dict):

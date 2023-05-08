@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import time
 
 
 class Motor(ABC):
@@ -8,6 +9,7 @@ class Motor(ABC):
 
     @abstractmethod
     def rotate(self, angle: float, cw: bool):
+        pass
         # informarle al driver cuantos pulsos y direccion
 
 class Spectrometer(ABC):
@@ -25,15 +27,8 @@ class Spectrometer(ABC):
     def _goto_wavelength(self, wavelength):
         # return angulo y direccion
         # teniendo en cuenta la calibracion y posicion del motoro
+        pass
 
-class MotorDriver(ABC):
-    @abstractmethod
-    def __init__(self):
-        pass
-    
-    @abstractmethod
-    def step(self):
-        pass
 
 class TTL:
 
@@ -58,9 +53,25 @@ class TTL:
     
     def toggle(self) -> None:
         self.state = not self.state
+
+    def pulse(self, duration) -> None:
+        self.toggle()
+        time.sleep(duration)
+        self.toggle()
     
     def __str__(self):
         return str(self.state)
     
+
+class MotorDriver(ABC):
+    step: TTL
+
+    @abstractmethod
+    def __init__(self):
+        pass
+    
+    @abstractmethod
+    def step(self):
+        pass
 
 

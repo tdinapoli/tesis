@@ -20,29 +20,26 @@ class A4988(abstract.MotorDriver):
     ms3: RPTTL
     notreset: RPTTL
     notsleep: RPTTL
-    step: RPTTL
+    pin_step: RPTTL
     direction: RPTTL
     ttls: dict
-    modes = (
-            (False, False, False), #Full step
-            (True, False, False) , #Half 
-            (False, True, False) , #Quarter
-            (True, True, False)  , #Eighth
-            (True, True, True)   , #Sixteenth
-            )
+    _MODES = (
+                (False, False, False), #Full step
+                (True, False, False) , #Half 
+                (False, True, False) , #Quarter
+                (True, True, False)  , #Eighth
+                (True, True, True)   , #Sixteenth
+               )
 
     def __init__(self, ttls: dict, mode: int = 0):
         for ttl in ttls:
             setattr(self, ttl, ttls[ttl])
-        self.notreset.state = True
-        self.notenable.state = False
-        self.notsleep.state = True
-        self.direction.state = True
-        self.step.state = False
-        self.set_stepping(0)
 
     def set_stepping(self, mode: int):
-        self.ms1.state, self.ms2.state, self.ms3.state = modes[mode]
+        self.ms1.state, self.ms2.state, self.ms3.state = self._MODES[mode]
+
+    def get_stepping(self):
+        return self._MODES.index((self.ms1.state, self.ms2.state, self.ms3.state))
 
     #Obs: creo que la minima duracion del pulso es 1 micro segundo
     #Obs2: para q funcione el step debe ir de low a high. Si se 
@@ -50,15 +47,48 @@ class A4988(abstract.MotorDriver):
     # driver.step.state = True), esta driver.step() no va a hacer lo
     # esperado (pensar cómo solucionar).
     def step(self, duration=1e-6):
-        self.step.pulse(duration)
+        self.pin_step.pulse(duration)
     
 
-class Motor:
-    def __init__(self, driver):
-        self.driver = driver
+class M061CS02(abstract.Motor):
+    _STEPS_MODE = (200, 400, 800, 1600, 3200)
 
-    def rotate(self, angle: float, direction: str):
-        self.driver.direction = direction
+    def __init__(self, driver, steps: int = 200, angle: float = 0.0):
+        self._driver = driver
+        self._angle = angle
+        self.steps = steps
+        self._min_angle = 360.0/self.steps
+        self._min_pulse_duration = 1e-6
+
+    # Caso patológico:
+    # motor.rotate(90.0, True) # 50 pasos
+    # motor.rotate(0.0, False) # 49 pasos
+    # Sucede por el truncamiento del decimal. 
+    # Pensar cómo resolver
+    def rotate(self, angle: float, cw: bool):
+        angle_change_sign = (int(cw)*2 - 1)
+        counter = 0
+        while abs((self._angle%360 - angle%360)) >= self._min_angle:
+            counter += 1
+            self._driver.step(duration = self._min_pulse_duration)
+            self._angle +=  angle_change_sign * self._min_angle
+        print(counter)
+
+    @property
+    def angle(self):
+        return self._angle % 360
+
+    @property
+    def steps(self, steps: int = 200):
+        return self._STEPS_MODE[self._driver.get_stepping()]
+
+    @steps.setter
+    def steps(self, steps: int = 200):
+        self._driver.set_stepping(self._STEPS_MODE.index(steps))
+
+    def set_origin(self):
+        self._angle = 0.0
+
 
 class Spectrometer:
     def __init__(self, motor):
@@ -86,22 +116,22 @@ class GPIO_helper:
 
 if __name__ == "__main__":
     ttls = {
-            'enable':   RPTTL(True, ('n', 0), GPIO_helper),
-            'ms1'   :   RPTTL(True, ('n', 1), GPIO_helper),
-            'ms2'   :   RPTTL(True, ('n', 2), GPIO_helper),
-            'ms3'   :   RPTTL(True, ('n', 3), GPIO_helper),
+            'notenable':RPTTL(False, ('n', 0), GPIO_helper),
+            'ms1'   :   RPTTL(False, ('n', 1), GPIO_helper),
+            'ms2'   :   RPTTL(False, ('n', 2), GPIO_helper),
+            'ms3'   :   RPTTL(False, ('n', 3), GPIO_helper),
             'notreset': RPTTL(True, ('n', 4), GPIO_helper),
             'notsleep': RPTTL(True, ('n', 5), GPIO_helper),
-            'step'  :   RPTTL(True, ('n', 6), GPIO_helper),
+            'pin_step'  :   RPTTL(False, ('n', 6), GPIO_helper),
             'direction':RPTTL(True, ('n', 7), GPIO_helper),
             }
 
     driver = A4988(ttls)
-    print(driver.step.state)
-    driver.step.state = False
-    print(driver.step.state)
-    driver.step.toggle()
-    print(driver.step.state)
-    driver.step.pulse(0)
+    motor = M061CS02(driver)
+    print(motor.angle)
+    motor.rotate(90.0, True)
+    print(motor.angle)
+    motor.rotate(0.0, False)
+    print(motor.angle)
     pass
 

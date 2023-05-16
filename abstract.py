@@ -18,15 +18,15 @@ class Spectrometer(ABC):
         pass
 
     @abstractmethod
-    def set_current_wavelength(self, wavelength: float):
+    def set_wavelength(self, wavelength: float):
         pass
     
+    @abstractmethod
     def goto_wavelength(self, wavelength):
         pass
-    
+
+    @abstractmethod
     def _goto_wavelength(self, wavelength):
-        # return angulo y direccion
-        # teniendo en cuenta la calibracion y posicion del motoro
         pass
 
 

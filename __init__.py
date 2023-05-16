@@ -1,5 +1,5 @@
 import abstract
-
+import yaml
 
 class RPTTL(abstract.TTL):
     def __init__(self, state, pin, gpio):
@@ -95,20 +95,64 @@ class M061CS02(abstract.Motor):
     def steps(self, steps: int = 200):
         self._driver.set_stepping(self._STEPS_MODE.index(steps))
 
-    def set_origin(self):
-        self._angle = 0.0
+    def set_origin(self, angle):
+        self._angle = angle
 
 
-class Spectrometer:
-    def __init__(self, motor):
+class Spectrometer(abstract.Spectrometer):
+    def __init__(self, motor: abstract.Motor):
         self.motor = motor
+        self._wavelength = None # nm
+        self._greater_wl_cw = None 
+        self._wl_angle_ratio = None # nm/degree
+        self._calibration = None
 
+    @classmethod
+    def constructor(cls, motor):
+        pass
+
+    # Esto es necesario?
     def set_wavelength(self, wavelength: float):
-        angle = self._angle_from_wl(wavelength)
-        self.motor.rotate(angle)
+        self._wavelength = wavelength
 
-    def _angle_from_wl(self, wavelength: float):
-        raise NotImplementedError
+    def check_safety(self, angle, cw):
+        return True 
+
+    def goto_wavelength(self, wavelength: float):
+        angle, cw = self._angle_cw_from_wl(wavelength) # Para qué hacemos esto?
+        if self.check_safety(angle, cw):
+            self.motor.rotate_relative(angle, cw)
+
+    def _goto_wavelength(self, wavelength: float):
+        cw = self._cw_from_wl(wavelength)
+        angle = self._angle_from_wl(wavelength)
+        return angle, cw
+
+    # Tabla de verdad para saber si ir cw o counter cw:
+    # self._greater_wl_cw | wl_dif > 0 | cw
+    # 1 | 1 | 1
+    # 1 | 0 | 0
+    # 0 | 1 | 0
+    # 0 | 0 | 1
+    # Equivalente a (wl_dif > 0) == self._greater_wl_cw
+    def _cw_from_wl(self, wavelength):
+        wl_dif = wavelength - self._wavelength
+        if (wl_dif > 0) == self._greater_wl_cw:
+            return True
+        else:
+            return False
+
+    def _angle_from_wl(self, wavelength: float, cw: bool):
+        angle = abs(wavelength - self._wavelength)/self._wl_deg_ratio
+        return angle
+
+    def load_calibration(self, path): #wavelength
+        with open(path, 'r') as f:
+            self._calibration = yaml.safe_load(f)
+        self.set_wavelength(self._calibration['wavelength'])
+        self._greater_wl_cw = self._calibration['greater_wl_cw']
+        self._wl_deg_ratio = self._calibration['wl_deg_ratio']
+
 
 class GPIO_helper:
     def __init__(self, column: str, pin: int, io: str):
@@ -140,7 +184,7 @@ if __name__ == "__main__":
     print(motor.angle)
     motor.rotate(180, True)
     print(motor.angle)
-    motor.rotate_relative(180, True)
+    motor.rotate_relative(180, False)
     print(motor.angle)
 
     pass

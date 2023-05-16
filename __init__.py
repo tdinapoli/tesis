@@ -63,10 +63,21 @@ class M061CS02(abstract.Motor):
 
     def rotate(self, angle: float, cw: bool):
         angle_change_sign = (int(cw)*2 - 1)
+        self._driver.direction.state = cw
         while abs(round(self._angle - angle, 5)) >= self._min_angle:
             self._driver.step(duration = self._min_pulse_duration)
             self._angle +=  angle_change_sign * self._min_angle
         self._angle = round(self._angle, 5)
+
+    def rotate_relative(self, angle: float, cw: bool, change_angle: bool = True):
+        angle_done = 0.0
+        self._driver.direction.state = cw
+        while abs(round(angle - angle_done, 5)) >= self._min_angle:
+            self._driver.step(duration = self._min_pulse_duration)
+            angle_done += self._min_angle
+        if change_angle:
+            angle_change_sign = (int(cw)*2 - 1)
+            self._angle = round(self._angle + angle_change_sign * angle_done, 5)
 
     @property
     def angle(self):
@@ -127,8 +138,10 @@ if __name__ == "__main__":
     driver = A4988(ttls)
     motor = M061CS02(driver)
     print(motor.angle)
-    motor.rotate(2*360, True)
+    motor.rotate(180, True)
     print(motor.angle)
-    print(motor.angle_relative)
+    motor.rotate_relative(180, True)
+    print(motor.angle)
+
     pass
 

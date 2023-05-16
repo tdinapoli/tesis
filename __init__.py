@@ -60,19 +60,12 @@ class M061CS02(abstract.Motor):
         self._min_angle = 360.0/self.steps
         self._min_pulse_duration = 1e-6
 
-    # Caso patológico:
-    # motor.rotate(90.0, True) # 50 pasos
-    # motor.rotate(0.0, False) # 49 pasos
-    # Sucede por el truncamiento del decimal. 
-    # Pensar cómo resolver
     def rotate(self, angle: float, cw: bool):
         angle_change_sign = (int(cw)*2 - 1)
-        counter = 0
         while abs((self._angle%360 - angle%360)) >= self._min_angle:
-            counter += 1
             self._driver.step(duration = self._min_pulse_duration)
             self._angle +=  angle_change_sign * self._min_angle
-        print(counter)
+        self._angle = round(self._angle, 2)
 
     @property
     def angle(self):

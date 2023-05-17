@@ -161,10 +161,13 @@ class Spectrometer(abstract.Spectrometer):
     def load_calibration(self, path): #wavelength
         with open(path, 'r') as f:
             self._calibration = yaml.safe_load(f)
-        self.set_wavelength(self._calibration['wavelength'])
-        self._greater_wl_cw = self._calibration['greater_wl_cw']
-        self._wl_deg_ratio = self._calibration['wl_deg_ratio']
-
+        for param in self._calibration:
+            setattr(self, f"_{param}", self._calibration[param])
+            # Esto hace que la property se agregue a la clase, y no a la
+            # instancia (diferencia entre self y self.__class__). Creo que
+            # En este caso no importa, pero es algo a tener en cuenta
+            setattr(self.__class__, param,
+                    property(fget=lambda self: getattr(self, f"_{param}")))
 
 class GPIO_helper:
     def __init__(self, column: str, pin: int, io: str):
@@ -192,6 +195,7 @@ if __name__ == "__main__":
             }
 
     spec = Spectrometer.constructor_default()
-
+    spec.load_calibration("calibration.yaml")
+    print(spec.max_wl)
     pass
 

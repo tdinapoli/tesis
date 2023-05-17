@@ -79,6 +79,14 @@ class M061CS02(abstract.Motor):
             angle_change_sign = (int(cw)*2 - 1)
             self._angle = round(self._angle + angle_change_sign * angle_done, 5)
 
+    def rotate_step(self, steps: int, cw: bool, change_angle: bool = True):
+        self._driver.direction.state = cw
+        for _ in range(steps):
+            self._driver.step(duration = self._min_pulse_duration)
+        if change_angle:
+            angle_change_sign = (int(cw)*2 - 1)
+            self._angle = round(self._angle + angle_change_sign * self.min_angle * steps, 5)
+
     @property
     def angle(self):
         return self._angle

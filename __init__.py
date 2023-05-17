@@ -88,6 +88,10 @@ class M061CS02(abstract.Motor):
         return self._angle % 360
 
     @property
+    def min_angle(self):
+        return 360 / self.steps
+
+    @property
     def steps(self, steps: int = 200):
         return self._STEPS_MODE[self._driver.get_stepping()]
 

@@ -101,7 +101,7 @@ class M061CS02(abstract.Motor):
 
 class Spectrometer(abstract.Spectrometer):
     def __init__(self, motor: abstract.Motor):
-        self.motor = motor
+        self._motor = motor
         self._wavelength = None # nm
         self._greater_wl_cw = None 
         self._wl_angle_ratio = None # nm/degree
@@ -131,9 +131,9 @@ class Spectrometer(abstract.Spectrometer):
         return True 
 
     def goto_wavelength(self, wavelength: float):
-        angle, cw = self._angle_cw_from_wl(wavelength) # Para qué hacemos esto?
+        angle, cw = self._goto_wavelength(wavelength) # Para qué hacemos esto?
         if self.check_safety(angle, cw):
-            self.motor.rotate_relative(angle, cw)
+            self._motor.rotate_relative(angle, cw)
 
     def _goto_wavelength(self, wavelength: float):
         cw = self._cw_from_wl(wavelength)

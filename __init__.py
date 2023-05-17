@@ -108,8 +108,20 @@ class Spectrometer(abstract.Spectrometer):
         self._calibration = None
 
     @classmethod
-    def constructor(cls, motor):
-        pass
+    def constructor_default(cls):
+        ttls = {
+                'notenable' :   RPTTL(False, ('n', 0), GPIO_helper),
+                'ms1'       :   RPTTL(False, ('n', 1), GPIO_helper),
+                'ms2'       :   RPTTL(False, ('n', 2), GPIO_helper),
+                'ms3'       :   RPTTL(False, ('n', 3), GPIO_helper),
+                'notreset'  :   RPTTL(True , ('n', 4), GPIO_helper),
+                'notsleep'  :   RPTTL(True , ('n', 5), GPIO_helper),
+                'pin_step'  :   RPTTL(False, ('n', 6), GPIO_helper),
+                'direction' :   RPTTL(True , ('n', 7), GPIO_helper),
+                }
+        driver = A4988(ttls)
+        motor = M061CS02(driver)
+        return Spectrometer(motor)
 
     # Esto es necesario?
     def set_wavelength(self, wavelength: float):
@@ -179,13 +191,7 @@ if __name__ == "__main__":
             'direction':RPTTL(True, ('n', 7), GPIO_helper),
             }
 
-    driver = A4988(ttls)
-    motor = M061CS02(driver)
-    print(motor.angle)
-    motor.rotate(180, True)
-    print(motor.angle)
-    motor.rotate_relative(180, False)
-    print(motor.angle)
+    spec = Spectrometer.constructor_default()
 
     pass
 

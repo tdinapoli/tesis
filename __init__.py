@@ -102,10 +102,13 @@ class M061CS02(abstract.Motor):
 class Spectrometer(abstract.Spectrometer):
     def __init__(self, motor: abstract.Motor):
         self._motor = motor
+        # Es necesario definir todas estas cosas? o directamente ni las defino
         self._wavelength = None # nm
         self._greater_wl_cw = None 
         self._wl_angle_ratio = None # nm/degree
         self._calibration = None
+        self._max_wl = None
+        self._min_wl = None
 
     @classmethod
     def constructor_default(cls):
@@ -127,12 +130,16 @@ class Spectrometer(abstract.Spectrometer):
     def set_wavelength(self, wavelength: float):
         self._wavelength = wavelength
 
-    def check_safety(self, angle, cw):
-        return True 
+    def check_safety(self, wavelength):
+        # este check no parece muy bueno. Pensar cómo mejorarlo
+        if self._min_wl < wavelength < self._max_wl:
+            return True
+        else:
+            return False 
 
     def goto_wavelength(self, wavelength: float):
-        angle, cw = self._goto_wavelength(wavelength) # Para qué hacemos esto?
-        if self.check_safety(angle, cw):
+        angle, cw = self._goto_wavelength(wavelength)
+        if self.check_safety(wavelength):
             self._motor.rotate_relative(angle, cw)
 
     def _goto_wavelength(self, wavelength: float):
@@ -169,6 +176,7 @@ class Spectrometer(abstract.Spectrometer):
             setattr(self.__class__, param,
                     property(fget=lambda self: getattr(self, f"_{param}")))
 
+
 class GPIO_helper:
     def __init__(self, column: str, pin: int, io: str):
         self.column = column
@@ -183,17 +191,6 @@ class GPIO_helper:
         return self.state
 
 if __name__ == "__main__":
-    ttls = {
-            'notenable':RPTTL(False, ('n', 0), GPIO_helper),
-            'ms1'   :   RPTTL(False, ('n', 1), GPIO_helper),
-            'ms2'   :   RPTTL(False, ('n', 2), GPIO_helper),
-            'ms3'   :   RPTTL(False, ('n', 3), GPIO_helper),
-            'notreset': RPTTL(True, ('n', 4), GPIO_helper),
-            'notsleep': RPTTL(True, ('n', 5), GPIO_helper),
-            'pin_step'  :   RPTTL(False, ('n', 6), GPIO_helper),
-            'direction':RPTTL(True, ('n', 7), GPIO_helper),
-            }
-
     spec = Spectrometer.constructor_default()
     spec.load_calibration("calibration.yaml")
     print(spec.max_wl)

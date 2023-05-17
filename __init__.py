@@ -112,12 +112,18 @@ class M061CS02(abstract.Motor):
 
 
 class Spectrometer(abstract.Spectrometer):
+    CALIB_ATTRS = [ '_wl_deg_ratio',
+                    '_greater_wl_cw',
+                    '_max_wl',
+                    '_min_wl',
+                    '_wavelength']
+
     def __init__(self, motor: abstract.Motor):
         self._motor = motor
         # Es necesario definir todas estas cosas? o directamente ni las defino
         self._wavelength = None # nm
         self._greater_wl_cw = None 
-        self._wl_angle_ratio = None # nm/degree
+        self._wl_deg_ratio = None # nm/degree
         self._calibration = None
         self._max_wl = None
         self._min_wl = None
@@ -188,6 +194,165 @@ class Spectrometer(abstract.Spectrometer):
             setattr(self.__class__, param,
                     property(fget=lambda self: getattr(self, f"_{param}")))
 
+    def _calibration_options(self):
+        print()
+        print("abort: q")
+        print("set max wl: mxwl")
+        print("set min wl: mnwl")
+        print("set wl growth direction: wgd")
+        print("set wl to deg ratio: wdeg")
+        print("set current wl in nm: wl")
+        print("write to file: write")
+        print("print calibration status: s")
+        print("show this message: h")
+        print("\n")
+
+    def _write_calibration_file(self, filename):
+        with open(filename, "w") as f:
+            calibration_dict = self.get_calibration_dict()
+            yaml.dump(calibration_dict, f)
+
+    def status(self):
+        for attr in self.CALIB_ATTRS:
+            if not getattr(self, attr):
+                return False
+        return True
+
+    def get_calibration_dict(self):
+        calibration_dict = {}
+        for attr in self.CALIB_ATTRS:
+            calibration_dict[attr[1:]] = getattr(self, attr)
+        return calibration_dict
+
+    def _wgd_menu(self):
+        print('abort: a')
+        print('rotate clowckwise: cw')
+        print('rotate counterclockwise: ccw')
+        print('rotate n steps: r')
+        print('wavelength grows clockwise: cwg')
+        print('wavelength grows counterclockwise: ccwg')
+
+    def _wgd_is_clockwise(self):
+        cw = None
+        cmd = ''
+        while cmd != 'a':
+            cmd = input('input command: ')
+            if cmd == 'cw':
+                cw = True
+            elif cmd == 'ccw':
+                cw = False
+            elif cmd == 'r':
+                if cw is not None:
+                    steps = input('amount of steps: ')
+                    try:
+                        steps = int(steps)
+                        print(self._motor.angle)
+                        self._motor.rotate_step(steps, cw)
+                        print(self._motor.angle)
+                    except:
+                        print(steps, type(steps))
+                        print("invalid input")
+                        self._wgd_menu()
+                        cmd = ''
+                else:
+                    print("define cw first")
+            elif cmd == 'cwg':
+                return True
+            elif cmd == 'ccwg':
+                return False
+            elif cmd == '' or cmd == 'a':
+                pass
+            else:
+                print("invalid command")
+        return None
+
+    def _wdeg_functionality(self):
+        cw = None
+        cmd = ''
+        cmd = input('input clockwise(t) or counterclockwise(f): ')
+        if cmd == 't':
+            cw = True
+        elif cmd == 'f':
+            cw = False
+        else:
+            print('invalid command')
+            print('aborting...')
+            return None
+        degs = input('input rotation angle (in deg): ')
+        try:
+            degs = float(degs)
+            print(self._motor.angle)
+            self._motor.rotate_relative(degs, cw)
+            print(self._motor.angle)
+        except:
+            print("invalid input")
+            print("aborting...")
+            return None
+        wl_change = input('input wl change in nm: ')
+        try:
+            wl_change = float(wl_change)
+        except:
+            print('invalid input')
+            print('aborting...')
+            return None
+        return wl_change/degs
+
+    def calibrate(self):
+        print("Calibration menu ")
+        cmd = "h"
+        self._calibration_options()
+        while cmd != 'q':
+            print()
+            cmd = input('input command: ')
+            if cmd == 'mxwl':
+                print("input max wavelength value in nm: ")
+                max_wl = input()
+                try:
+                    self._max_wl = float(max_wl)
+                except:
+                    print("invalid input")
+                    cmd = ''
+            elif cmd == 'mnwl':
+                print("input min wavelength value in nm: ")
+                min_wl = input()
+                try:
+                    self._min_wl = float(min_wl)
+                except:
+                    print("invalid input")
+                    cmd = ''
+            elif cmd == 'wgd':
+                self._wgd_menu()
+                self._greater_wl_cw = self._wgd_is_clockwise()
+            elif cmd == 'wdeg':
+                self._wl_deg_ratio = self._wdeg_functionality()
+            elif cmd == 'write':
+                if self.status():
+                    print("Enter calibration full path: \n")
+                    path = input()
+                    self._write_calibration_file(path)
+                else:
+                    print("Complete calibration first")
+            elif cmd == 's':
+                print()
+                for attr in self.CALIB_ATTRS:
+                    print(f"{attr[1:]}: {getattr(self, attr)}")
+                print(f"calibration complete: {self.status()}")
+            elif cmd == 'wl':
+                wl = input("input current wl (in nm): ")
+                try:
+                    wl = float(wl)
+                    self.set_wavelength(wl)
+                except:
+                    print("invalid input")
+                    cmd = ''
+            elif cmd == 'h':
+                self._calibration_options()
+            elif cmd == 'q':
+                pass
+            elif cmd == '':
+                pass
+            else:
+                print("invalid command")
 
 class GPIO_helper:
     def __init__(self, column: str, pin: int, io: str):
@@ -204,7 +369,7 @@ class GPIO_helper:
 
 if __name__ == "__main__":
     spec = Spectrometer.constructor_default()
-    spec.load_calibration("calibration.yaml")
-    print(spec.max_wl)
+    spec.calibrate()
     pass
+
 

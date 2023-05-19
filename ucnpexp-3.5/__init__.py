@@ -143,7 +143,7 @@ class Spectrometer(abstract.Spectrometer):
                 'notreset'  :   RPTTL(True , ('n', 4), GPIO),
                 'notsleep'  :   RPTTL(True , ('n', 5), GPIO),
                 'pin_step'  :   RPTTL(False, ('n', 6), GPIO),
-                'direction' :   RPTTL(True , ('n', 7), GPIO),
+                'direction' :   RPTTL(True , ('p', 7), GPIO),
                 }
         driver = MOTOR_DRIVER(ttls)
         motor = MOTOR(driver)

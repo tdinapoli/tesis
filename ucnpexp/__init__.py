@@ -110,6 +110,18 @@ class M061CS02(abstract.Motor):
     def set_origin(self, angle):
         self._angle = angle
 
+class GPIO_helper:
+    def __init__(self, column: str, pin: int, io: str):
+        self.column = column
+        self.pin = pin
+        self.io = io
+        self.state = True
+
+    def write(self, state: bool):
+        self.state = state
+
+    def read(self):
+        return self.state
 
 class Spectrometer(abstract.Spectrometer):
     CALIB_ATTRS = [ '_wl_deg_ratio',
@@ -129,20 +141,20 @@ class Spectrometer(abstract.Spectrometer):
         self._min_wl = None
 
     @classmethod
-    def constructor_default(cls):
+    def constructor_default(cls, GPIO=GPIO_helper, MOTOR_DRIVER=A4988, MOTOR=M061CS02):
         ttls = {
-                'notenable' :   RPTTL(False, ('n', 0), GPIO_helper),
-                'ms1'       :   RPTTL(False, ('n', 1), GPIO_helper),
-                'ms2'       :   RPTTL(False, ('n', 2), GPIO_helper),
-                'ms3'       :   RPTTL(False, ('n', 3), GPIO_helper),
-                'notreset'  :   RPTTL(True , ('n', 4), GPIO_helper),
-                'notsleep'  :   RPTTL(True , ('n', 5), GPIO_helper),
-                'pin_step'  :   RPTTL(False, ('n', 6), GPIO_helper),
-                'direction' :   RPTTL(True , ('n', 7), GPIO_helper),
+                'notenable' :   RPTTL(False, ('n', 0), GPIO),
+                'ms1'       :   RPTTL(False, ('n', 1), GPIO),
+                'ms2'       :   RPTTL(False, ('n', 2), GPIO),
+                'ms3'       :   RPTTL(False, ('n', 3), GPIO),
+                'notreset'  :   RPTTL(True , ('n', 4), GPIO),
+                'notsleep'  :   RPTTL(True , ('n', 5), GPIO),
+                'pin_step'  :   RPTTL(False, ('n', 6), GPIO),
+                'direction' :   RPTTL(True , ('n', 7), GPIO),
                 }
-        driver = A4988(ttls)
-        motor = M061CS02(driver)
-        return Spectrometer(motor)
+        driver = MOTOR_DRIVER(ttls)
+        motor = MOTOR(driver)
+        return cls(motor)
 
     # Esto es necesario?
     def set_wavelength(self, wavelength: float):
@@ -354,18 +366,6 @@ class Spectrometer(abstract.Spectrometer):
             else:
                 print("invalid command")
 
-class GPIO_helper:
-    def __init__(self, column: str, pin: int, io: str):
-        self.column = column
-        self.pin = pin
-        self.io = io
-        self.state = True
-
-    def write(self, state: bool):
-        self.state = state
-
-    def read(self):
-        return self.state
 
 if __name__ == "__main__":
     spec = Spectrometer.constructor_default()

@@ -103,6 +103,18 @@ class M061CS02(abstract.Motor):
     def set_origin(self, angle):
         self._angle = angle
 
+class GPIO_helper:
+    def __init__(self, column, pin, io):
+        self.column = column
+        self.pin = pin
+        self.io = io
+        self.state = True
+
+    def write(self, state):
+        self.state = state
+
+    def read(self):
+        return self.state
 
 class Spectrometer(abstract.Spectrometer):
     CALIB_ATTRS = [ '_wl_deg_ratio',
@@ -122,7 +134,7 @@ class Spectrometer(abstract.Spectrometer):
         self._min_wl = None
 
     @classmethod
-    def constructor_default(cls, GPIO, MOTOR_DRIVER=A4988, MOTOR=M061CS02):
+    def constructor_default(cls, GPIO=GPIO_helper, MOTOR_DRIVER=A4988, MOTOR=M061CS02):
         ttls = {
                 'notenable' :   RPTTL(False, ('n', 0), GPIO),
                 'ms1'       :   RPTTL(False, ('n', 1), GPIO),
@@ -347,18 +359,6 @@ class Spectrometer(abstract.Spectrometer):
             else:
                 print("invalid command")
 
-class GPIO_helper:
-    def __init__(self, column, pin, io):
-        self.column = column
-        self.pin = pin
-        self.io = io
-        self.state = True
-
-    def write(self, state):
-        self.state = state
-
-    def read(self):
-        return self.state
 
 if __name__ == "__main__":
     spec = Spectrometer.constructor_default()

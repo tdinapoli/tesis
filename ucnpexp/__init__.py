@@ -1,5 +1,6 @@
 import abstract
 import yaml
+import rpyc
 
 class RPTTL(abstract.TTL):
     def __init__(self, state, pin, gpio):
@@ -13,15 +14,16 @@ class RPTTL(abstract.TTL):
     def _set_state(self, state):
         self._gpio.write(state)
 
+
 class A4988(abstract.MotorDriver):
-    notenable: RPTTL
-    ms1: RPTTL
-    ms2: RPTTL
-    ms3: RPTTL
-    notreset: RPTTL
-    notsleep: RPTTL
-    pin_step: RPTTL
-    direction: RPTTL
+    #notenable: rpyc.core.netref.__main__.RPTTL
+    #ms1: rpyc.core.netref.__main__.RPTTL
+    #ms2: rpyc.core.netref.__main__.RPTTL
+    #ms3: rpyc.core.netref.__main__.RPTTL
+    #notreset: rpyc.core.netref.__main__.RPTTL
+    #notsleep: rpyc.core.netref.__main__.RPTTL
+    #pin_step: rpyc.core.netref.__main__.RPTTL
+    #direction: rpyc.core.netref.__main__.RPTTL
     ttls: dict
     _MODES = (
                 (False, False, False), #Full step
@@ -141,16 +143,16 @@ class Spectrometer(abstract.Spectrometer):
         self._min_wl = None
 
     @classmethod
-    def constructor_default(cls, GPIO=GPIO_helper, MOTOR_DRIVER=A4988, MOTOR=M061CS02):
+    def constructor_default(cls, conn, MOTOR_DRIVER=A4988, MOTOR=M061CS02):
         ttls = {
-                'notenable' :   RPTTL(False, ('n', 0), GPIO),
-                'ms1'       :   RPTTL(False, ('n', 1), GPIO),
-                'ms2'       :   RPTTL(False, ('n', 2), GPIO),
-                'ms3'       :   RPTTL(False, ('n', 3), GPIO),
-                'notreset'  :   RPTTL(True , ('n', 4), GPIO),
-                'notsleep'  :   RPTTL(True , ('n', 5), GPIO),
-                'pin_step'  :   RPTTL(False, ('n', 6), GPIO),
-                'direction' :   RPTTL(True , ('n', 7), GPIO),
+                'notenable' :   conn.root.create_RPTTL('notenable', (False, 'n', 0)),
+                'ms1'       :   conn.root.create_RPTTL('ms1', (False, 'n', 1)),
+                'ms2'       :   conn.root.create_RPTTL('ms2', (False, 'n', 2)),
+                'ms3'       :   conn.root.create_RPTTL('ms3', (False, 'n', 3)),
+                'notreset'  :   conn.root.create_RPTTL('notreset', (True, 'n', 4)),
+                'notsleep'  :   conn.root.create_RPTTL('notsleep', (True, 'n', 5)),
+                'pin_step'  :   conn.root.create_RPTTL('pin_step', (False, 'n', 6)),
+                'direction' :   conn.root.create_RPTTL('direction', (True, 'n', 7)),
                 }
         driver = MOTOR_DRIVER(ttls)
         motor = MOTOR(driver)
@@ -368,7 +370,15 @@ class Spectrometer(abstract.Spectrometer):
 
 
 if __name__ == "__main__":
-    spec = Spectrometer.constructor_default()
+    import time
+    conn = None
+    while not conn:
+        try:
+            conn = rpyc.connect('rp-f05512.local', port=18861)
+        except:
+            time.sleep(1)
+
+    spec = Spectrometer.constructor_default(conn)
     spec.calibrate()
     pass
 

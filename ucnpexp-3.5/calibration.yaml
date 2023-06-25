@@ -1,5 +1,0 @@
-wl_deg_ratio: 0.2 # esto sirve sólo si la relación esta es cte en función del wl
-greater_wl_cw: True
-max_wl: 1000
-min_wl: 400
-wavelength: 800 # no va

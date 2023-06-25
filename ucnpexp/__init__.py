@@ -14,7 +14,6 @@ class RPTTL(abstract.TTL):
     def _set_state(self, state):
         self._gpio.write(state)
 
-
 class A4988(abstract.MotorDriver):
     #notenable: rpyc.core.netref.__main__.RPTTL
     #ms1: rpyc.core.netref.__main__.RPTTL
@@ -38,7 +37,10 @@ class A4988(abstract.MotorDriver):
             setattr(self, ttl, ttls[ttl])
 
     def set_stepping(self, mode: int):
-        self.ms1.state, self.ms2.state, self.ms3.state = self._MODES[mode]
+        s1, s2, s3 = self._MODES[mode]
+        self.ms1.set_state(s1)
+        self.ms2.set_state(s2)
+        self.ms3.set_state(s3)
 
     def get_stepping(self):
         return self._MODES.index((self.ms1.state, self.ms2.state, self.ms3.state))
@@ -65,7 +67,7 @@ class M061CS02(abstract.Motor):
 
     def rotate(self, angle: float, cw: bool):
         angle_change_sign = (int(cw)*2 - 1)
-        self._driver.direction.state = cw
+        self._driver.direction.set_state(cw)
         while abs(round(self._angle - angle, 5)) >= self._min_angle:
             self._driver.step(duration = self._min_pulse_duration)
             self._angle +=  angle_change_sign * self._min_angle
@@ -73,7 +75,7 @@ class M061CS02(abstract.Motor):
 
     def rotate_relative(self, angle: float, cw: bool, change_angle: bool = True):
         angle_done = 0.0
-        self._driver.direction.state = cw
+        self._driver.direction.set_state(cw)
         while abs(round(angle - angle_done, 5)) >= self._min_angle:
             self._driver.step(duration = self._min_pulse_duration)
             angle_done += self._min_angle
@@ -82,7 +84,7 @@ class M061CS02(abstract.Motor):
             self._angle = round(self._angle + angle_change_sign * angle_done, 5)
 
     def rotate_step(self, steps: int, cw: bool, change_angle: bool = True):
-        self._driver.direction.state = cw
+        self._driver.direction.set_state(cw)
         for _ in range(steps):
             self._driver.step(duration = self._min_pulse_duration)
         if change_angle:
@@ -117,10 +119,10 @@ class GPIO_helper:
         self.column = column
         self.pin = pin
         self.io = io
-        self.state = True
+        self.set_state(True)
 
     def write(self, state: bool):
-        self.state = state
+        self.set_state(state)
 
     def read(self):
         return self.state

@@ -5,20 +5,13 @@ class RPTTL:
     def __init__(self, state, pin, gpio):
         col, num = pin
         self._gpio = gpio(col, num, 'out')
-        self.exposed_state = state
+        self.exposed_set_state(state)
 
     @property
     def exposed_state(self):
-        return self._get_state()
-
-    @state.setter(self, state):
-    def exposed_state(self, state):
-        self._set_state(state)
-
-    def _get_state(self):
         return self._gpio.read()
 
-    def _set_state(self, state):
+    def exposed_set_state(self, state):
         self._gpio.write(state)
 
     def exposed_toggle(self):

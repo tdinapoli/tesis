@@ -11,7 +11,17 @@ class SpectrometerCalibrationInterface(cmd.Cmd):
 
     def do_maxwl(self, max_wl: float):
         'Set maximum Spectrometer wavelength'
-        self.spec._max_wl = float(max_wl)
+        try:
+            self.spec._max_wl = float(max_wl)
+        except:
+            print("Wrong argument")
+
+    def do_minwl(self, min_wl: float):
+        'Set maximum Spectrometer wavelength'
+        try:
+            self.spec._max_wl = float(max_wl)
+        except:
+            print("Wrong argument")
 
     def do_quit(self, arg):
         'Quit calibration menu'

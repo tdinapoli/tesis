@@ -15,12 +15,14 @@ class RPTTL:
         self._gpio.write(state)
 
     def exposed_toggle(self):
-        self.exposed_state = not self.exposed_state
+        self.exposed_set_state(not self.exposed_state)
 
-    def exposed_pulse(self, duration):
-        self.exposed_toggle()
-        time.sleep(duration)
-        self.exposed_toggle()
+    def exposed_pulse(self, ontime, offtime, amount=1):
+        for _ in range(amount):
+            self.exposed_toggle()
+            time.sleep(ontime)
+            self.exposed_toggle()
+            time.sleep(offtime)
 
     def __str__(self):
         return str(self.state)

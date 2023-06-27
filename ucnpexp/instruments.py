@@ -1,7 +1,7 @@
-import abstract
+from . import abstract
 import yaml
 import rpyc
-import user_interface as ui
+from . import user_interface as ui
 
 class RPTTL(abstract.TTL):
     def __init__(self, state, pin, gpio):
@@ -16,15 +16,10 @@ class RPTTL(abstract.TTL):
         self._gpio.write(state)
 
 class A4988(abstract.MotorDriver):
-    #notenable: rpyc.core.netref.__main__.RPTTL
-    #ms1: rpyc.core.netref.__main__.RPTTL
-    #ms2: rpyc.core.netref.__main__.RPTTL
-    #ms3: rpyc.core.netref.__main__.RPTTL
-    #notreset: rpyc.core.netref.__main__.RPTTL
-    #notsleep: rpyc.core.netref.__main__.RPTTL
-    #pin_step: rpyc.core.netref.__main__.RPTTL
-    #direction: rpyc.core.netref.__main__.RPTTL
     ttls: dict
+    # Mientras se use la shell para el pololu esto está 
+    # fijo en "full step".
+    # Sin embargo, Por algún motivo 400 pasos es aprox 360 grados
     _MODES = (
                 (False, False, False), #Full step
                 (True, False, False) , #Half 
@@ -51,8 +46,8 @@ class A4988(abstract.MotorDriver):
     # Desconfigura a mano el step (por ejemplo poniendo 
     # driver.step.state = True), esta driver.step() no va a hacer lo
     # esperado (pensar cómo solucionar).
-    def step(self, duration=1e-6):
-        self.pin_step.pulse(duration)
+    def step(self, ontime=10e-6, offtime=10e-6, amount=1):
+        self.pin_step.pulse(ontime, offtime, amount)
     
 
 class M061CS02(abstract.Motor):
@@ -64,13 +59,15 @@ class M061CS02(abstract.Motor):
         self._angle_relative = angle % 360
         self.steps = steps
         self._min_angle = 360.0/self.steps
-        self._min_pulse_duration = 1e-6
+        self._min_offtime = 10e-6
+        self._min_ontime = 10e-6
 
     def rotate(self, angle: float, cw: bool):
         angle_change_sign = (int(cw)*2 - 1)
         self._driver.direction.set_state(cw)
         while abs(round(self._angle - angle, 5)) >= self._min_angle:
-            self._driver.step(duration = self._min_pulse_duration)
+            self._driver.step(ontime = self._min_ontime,
+                              offtime= self._min_offtime)
             self._angle +=  angle_change_sign * self._min_angle
         self._angle = round(self._angle, 5)
 
@@ -78,7 +75,8 @@ class M061CS02(abstract.Motor):
         angle_done = 0.0
         self._driver.direction.set_state(cw)
         while abs(round(angle - angle_done, 5)) >= self._min_angle:
-            self._driver.step(duration = self._min_pulse_duration)
+            self._driver.step(ontime = self._min_ontime,
+                              offtime= self._min_offtime)
             angle_done += self._min_angle
         if change_angle:
             angle_change_sign = (int(cw)*2 - 1)
@@ -86,8 +84,9 @@ class M061CS02(abstract.Motor):
 
     def rotate_step(self, steps: int, cw: bool, change_angle: bool = True):
         self._driver.direction.set_state(cw)
-        for _ in range(steps):
-            self._driver.step(duration = self._min_pulse_duration)
+        self._driver.step(ontime = self._min_ontime,
+                          offtime= self._min_offtime,
+                          amount = steps)
         if change_angle:
             angle_change_sign = (int(cw)*2 - 1)
             self._angle = round(self._angle + angle_change_sign * self.min_angle * steps, 5)
@@ -155,7 +154,7 @@ class Spectrometer(abstract.Spectrometer):
                 'notreset'  :   conn.root.create_RPTTL('notreset', (True, 'n', 4)),
                 'notsleep'  :   conn.root.create_RPTTL('notsleep', (True, 'n', 5)),
                 'pin_step'  :   conn.root.create_RPTTL('pin_step', (False, 'n', 6)),
-                'direction' :   conn.root.create_RPTTL('direction', (True, 'n', 7)),
+                'direction' :   conn.root.create_RPTTL('direction', (True, 'p', 7)),
                 }
         driver = MOTOR_DRIVER(ttls)
         motor = MOTOR(driver)

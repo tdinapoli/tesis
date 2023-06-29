@@ -2,6 +2,7 @@ from . import abstract
 import yaml
 import rpyc
 from . import user_interface as ui
+import numpy as np
 
 class RPTTL(abstract.TTL):
     def __init__(self, state, pin, gpio):
@@ -62,25 +63,15 @@ class M061CS02(abstract.Motor):
         self._min_offtime = 10e-6
         self._min_ontime = 10e-6
 
-    def rotate(self, angle: float, cw: bool):
-        angle_change_sign = (int(cw)*2 - 1)
-        self._driver.direction.set_state(cw)
-        while abs(round(self._angle - angle, 5)) >= self._min_angle:
-            self._driver.step(ontime = self._min_ontime,
-                              offtime= self._min_offtime)
-            self._angle +=  angle_change_sign * self._min_angle
-        self._angle = round(self._angle, 5)
+    def rotate(self, angle: float):
+        relative_angle = angle - self._angle
+        self.rotate_relative(relative_angle)
 
-    def rotate_relative(self, angle: float, cw: bool, change_angle: bool = True):
-        angle_done = 0.0
+    def rotate_relative(self, angle: float, change_angle: bool = True):
+        cw, angle = angle > 0, abs(angle)
         self._driver.direction.set_state(cw)
-        while abs(round(angle - angle_done, 5)) >= self._min_angle:
-            self._driver.step(ontime = self._min_ontime,
-                              offtime= self._min_offtime)
-            angle_done += self._min_angle
-        if change_angle:
-            angle_change_sign = (int(cw)*2 - 1)
-            self._angle = round(self._angle + angle_change_sign * angle_done, 5)
+        steps = int(angle/self._min_angle)
+        self.rotate_step(steps, cw, change_angle=change_angle)
 
     def rotate_step(self, steps: int, cw: bool, change_angle: bool = True):
         self._driver.direction.set_state(cw)

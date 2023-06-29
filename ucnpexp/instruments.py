@@ -157,10 +157,7 @@ class Spectrometer(abstract.Spectrometer):
 
     def check_safety(self, wavelength):
         # este check no parece muy bueno. Pensar cómo mejorarlo
-        if self._min_wl < wavelength < self._max_wl:
-            return True
-        else:
-            return False 
+        return self._min_wl < wavelength < self._max_wl
 
     def goto_wavelength(self, wavelength: float):
         angle = (wavelength - self._wavelength)/self._wl_deg_ratio

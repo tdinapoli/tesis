@@ -128,12 +128,7 @@ class Spectrometer(abstract.Spectrometer):
     def __init__(self, motor: abstract.Motor):
         self._motor = motor
         # Es necesario definir todas estas cosas? o directamente ni las defino
-        self._wavelength = None # nm
-        self._greater_wl_cw = None 
-        self._wl_deg_ratio = None # nm/degree
-        self._calibration = None
-        self._max_wl = None
-        self._min_wl = None
+        [setattr(self, f"_{calib_attr}", None) for calib_attr in CALIB_ATTRS]
 
     @classmethod
     def constructor_default(cls, conn, MOTOR_DRIVER=A4988, MOTOR=M061CS02):

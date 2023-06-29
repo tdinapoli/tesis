@@ -163,32 +163,9 @@ class Spectrometer(abstract.Spectrometer):
             return False 
 
     def goto_wavelength(self, wavelength: float):
-        angle, cw = self._goto_wavelength(wavelength)
+        angle = (wavelength - self._wavelength)/self._wl_deg_ratio
         if self.check_safety(wavelength):
-            self._motor.rotate_relative(angle, cw)
-
-    def _goto_wavelength(self, wavelength: float):
-        cw = self._cw_from_wl(wavelength)
-        angle = self._angle_from_wl(wavelength)
-        return angle, cw
-
-    # Tabla de verdad para saber si ir cw o counter cw:
-    # self._greater_wl_cw | wl_dif > 0 | cw
-    # 1 | 1 | 1
-    # 1 | 0 | 0
-    # 0 | 1 | 0
-    # 0 | 0 | 1
-    # Equivalente a (wl_dif > 0) == self._greater_wl_cw
-    def _cw_from_wl(self, wavelength):
-        wl_dif = wavelength - self._wavelength
-        if (wl_dif > 0) == self._greater_wl_cw:
-            return True
-        else:
-            return False
-
-    def _angle_from_wl(self, wavelength: float, cw: bool):
-        angle = abs(wavelength - self._wavelength)/self._wl_deg_ratio
-        return angle
+            self._motor.rotate_relative(angle)
 
     def load_calibration(self, path): #wavelength
         with open(path, 'r') as f:

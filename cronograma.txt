@@ -1,0 +1,36 @@
+
+instrumentación:
+    requisitos: ninguno
+    objetivo general: Automatizar el control del experimento para que pueda ser controlado desde una página web
+    objetivos específicos:
+        1. Diseñar el control
+        2. Programar controladores funcionando desde el software (python) de la red pitaya
+        3. Conectar los instrumentos a la red pitaya
+        4. Comprobar que funcionan de forma esperada
+            1. Tomar muestra de fluorescencia conocida y medir su espectro varias veces 
+            2. Medir scattering de una muestra (emisión con el monocromador de emisión para tener pico angosto)
+        5. Implementar página web para realizar las mediciones
+
+medición:
+    requisitos: 
+        1-: instrumentación 4)
+    objetivo general: medir los tiempos de vida de los estados excitados de las UCNPs
+        1. Medir espectros
+            1. 
+        2. Medir tiempos de vida
+            1. Reproducir mediciones ya realizadas con los mismos parámetros y comparar resultados
+
+modelado:
+    requisitos:
+    objetivo general: Modelar las ecucaciones diferenciales de los mecanismos de excitación de los estados de las UCNPs
+    objetivos específicos:
+        0. Escribir en poincare el "experimento": excitar f(t) y mirar em(t, lambda) y hacer em
+        1. Juan
+        2. Pollnau
+        3. Zhao
+
+smartexp:
+    requisitos:
+    objetivo general: Hacer un software que elija inteligentemente el próximo punto a medir en un experimento con error
+    objetivos específicos:
+        1. ??

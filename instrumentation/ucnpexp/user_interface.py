@@ -3,9 +3,8 @@ from typing import IO
 
 class SpectrometerCalibrationInterface(cmd.Cmd):
     intro = '''
-Spectrometer calibration interface. Type help or ? to list commands. \n
-This interface aims to help you generate a calibration yaml file for the Spectrometer object.
-            '''
+Spectrometer calibration interface. This interface aims to help you generate a calibration yaml file for the Spectrometer object. \n
+Type help or ? to list commands.\n'''
     prompt = '(spec-calib)'
     file = None
 
@@ -120,42 +119,52 @@ class GrowthDirection(cmd.Cmd):
 Growth direction of the monochromator motor configuration menu.
 Type help or ? to list commands.
 
-This menu aims to help you determine wether the spectrometer wavelength increases clockwise (True) or counterclockwise (False).
+This menu aims to help you determine wether the spectrometer wavelength increases clockwise (True)
+or counterclockwise (False).
+Input l to turn 10 steps counter clockwise.
+Input r to turn 10 steps clockwise.
+Input L to turn 100 steps counter clockwise.
+Input R to turn 100 steps clockwise.
+Input set_growth_direction to set the growth direction.
     '''
-    prompt='(growth-direction)'
+    prompt=f'(growth-direction)'
 
     def __init__(self, spec):
         super(GrowthDirection, self).__init__()
         self.spec = spec
+        self.steps = 1
+        self.small_rotation = 10
+        self.large_rotation = 100
 
-    def do_rotcw(self, steps: int=1):
-        'Rotate monochromator motor n steps clockwise'
-        try:
-            steps = int(steps)
-            self.spec._motor._rotate_step(steps, True)
-        except:
-            print("Wrong argument")
-            print("Specify int steps")
+    def do_r(self, arg):
+        'Rotate monochromator motor 10 steps clockwise'
+        self.spec._motor._rotate_step(self.small_rotation, True)
 
-    def do_rotccw(self, steps: int=1):
-        'Rotate monochromator motor n steps counterclockwise'
-        try:
-            steps = int(steps)
-            self.spec._motor._rotate_step(steps, False)
-        except:
-            print("Wrong argument")
-            print("Specify int steps")
-    
+    def do_l(self, arg):
+        'Rotate monochromator motor 10 steps clockwise'
+        self.spec._motor._rotate_step(self.small_rotation, False)
+
+    def do_R(self, arg):
+        'Rotate monochromator motor 100 steps clockwise'
+        self.spec._motor._rotate_step(self.large_rotation, True)
+
+    def do_L(self, arg):
+        'Rotate monochromator motor 100 steps clockwise'
+        self.spec._motor._rotate_step(self.large_rotation, False)
+
     def do_set_growth_direction(self, cw: str):
-        'Set wavelength growth direction, clowckwise (True) or counterclockwise (False)'
+        '''Set wavelength growth direction.\n
+Usage: Input True for clowckwise or False for counter clockwise'''
         cw = cw.lower()
         if cw == "true":
             self.spec._greater_wl_cw = True
+            return True
         elif cw == "false":
             self.spec._greater_wl_cw = False
+            return True
         else:
             print("Wrong argument")
-            print("Should be True or False")
+            self.onecmd("help set_growth_direction")
 
 class TestMotor:
     def __init__(self):
@@ -181,5 +190,6 @@ class TestSpec:
 
 if __name__ == '__main__':
     spec = TestSpec()
-    spec.calibrate()
+    hola = spec.calibrate()
+    print(hola)
 

@@ -65,13 +65,16 @@ class M061CS02(abstract.Motor):
 
     def rotate(self, angle: float):
         relative_angle = angle - self._angle
-        self.rotate_relative(relative_angle)
+        angle_rotated = self.rotate_relative(relative_angle)
+        return angle_rotated
 
     def rotate_relative(self, angle: float, change_angle: bool = True):
         cw, angle = angle > 0, abs(angle)
         self._driver.direction.set_state(cw)
         steps = int(angle/self._min_angle)
         self.rotate_step(steps, cw, change_angle=change_angle)
+        angle_rotated = self._min_angle * steps
+        return angle_rotated
 
     def rotate_step(self, steps: int, cw: bool, change_angle: bool = True):
         self._driver.direction.set_state(cw)

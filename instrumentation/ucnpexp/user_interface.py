@@ -70,46 +70,72 @@ for a given angle change.
     def __init__(self, spec):
         super(WavelengthDegreeRatio, self).__init__()
         self.spec = spec
+        self._direction_dict = {True:"clockwise", False:"counter clockwise"}
 
-    def do_rot_angle(self, angle):
-        'Rotate an angle (float). Positive is clockwise, negative couterclockwise.'
+    def do_start(self, arg):
+        'Start calibration of the wavelength to degree ratio'
+        done = False
+        while not done:
+            self.initial_wavelength = self.ask_wavelength()
+            self.rot_angle()
+            self.final_wavelength = self.ask_wavelength()
+            done = self.ask_done()
+        print("Calculating...")
+        wl_deg_ratio = self.calculate_ratio()
+        print(f"Setting wavelength to degree ratio to {wl_deg_ratio} nm/deg")
+        self.spec._wl_deg_ratio = wl_deg_ratio
+        self.onecmd('quit')
+
+    def do_quit(self, arg):
+        'Go back to main calibration menu'
+        return True
+
+    def calculate_ratio(self):
+        ratio = (self.final_wavelength - self.initial_wavelength)/self.rotation_angle
+        print(self.final_wavelength, self.initial_wavelength, self.rotation_angle)
+        return ratio
+
+    def ask_done(self):
+        print("Calibration parameters you input:")
+        print(f"Initial wavelength:\t\t{self.initial_wavelength}")
+        print(f"Rotation angle:\t\t{self.rotation_angle}")
+        print(f"Final wavelength:\t\t{self.final_wavelength}")
+        answer = input("Do you want to calculate wavelength to degree ratio?[Y/n]").lower()
+        done = answer in ["y", ""]
+        if not done:
+            print("Aborting...")
+        return done
+
+    def rot_angle(self):
+        angle = input("Input a rotation angle for the motor in degrees: ")
         try:
-            # Esto puede llegar a traer problemas porque en realidad
-            # angle debería ser múltiplo de 1.8. Si se hace la cuenta de
-            # calibración con el angle de input puede tener un offset con 
-            # el real
             angle = float(angle)
-            print(f"Setting rotation angle to {angle}")
             self.rotation_angle = angle
-            self.spec._motor.rotate_relative(self.rotation_angle)
+            self.rotation_angle = self.spec._motor.rotate_relative(self.rotation_angle)
+            print(f"Rotate {angle} degrees {self._direction_dict[self.rotation_angle > 0]}")
         except:
             print("Wrong argument")
-            print("Should be a float")
+            print("Rotation angle should be a float")
     
-    def do_initial_wavelength(self, wavelength):
-        'Set wavelength value before rotating'
-        try:
-            wavelength = float(wavelength)
-            self.inital_wavelength = wavelength
-        except:
-            print("Wrong argument")
-            print("Initial wavelenght should be float")
-
-    def do_final_wavelength(self, wavelength):
-        'Set wavelength value after rotating'
-        try:
-            wavelength = float(wavelength)
-            self.final_wavelength = wavelength
-        except:
-            print("Wrong argument")
-            print("Final wavelenght should be float")
+    def ask_wavelength(self):
+        keep_going  = True
+        while keep_going:
+            wavelength = input("Input current wavelength in nm: ")
+            try:
+                wavelength = float(wavelength)
+                print(f"The spectrometer is now at {wavelength} nm")
+                keep_going = False
+            except:
+                print("Wrong argument")
+                print("wavelenght should be a float")
+        return wavelength
 
     def do_set_ratio(self, arg):
         print("Calculating wavelength to degree ratio")
-        print(f"Initial wavelength:\t {self.inital_wavelength}")
+        print(f"Initial wavelength:\t {self.initial_wavelength}")
         print(f"Final wavelength:\t {self.final_wavelength}")
         print(f"Rotation angle:\t {self.rotation_angle}")
-        ratio = (self.final_wavelength - self.inital_wavelength)/self.rotation_angle
+        ratio = (self.final_wavelength - self.initial_wavelength)/self.rotation_angle
         print(f"(final_wl - initial_wl)/angle = {ratio}")
         self.spec._wl_deg_ratio = ratio
         
@@ -175,6 +201,7 @@ class TestMotor:
 
     def rotate_relative(self, angle):
         print(f"rotate {angle}")
+        return angle
 
 class TestSpec:
     def __init__(self):

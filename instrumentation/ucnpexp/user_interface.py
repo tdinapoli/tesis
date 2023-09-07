@@ -1,5 +1,6 @@
 import cmd
 from typing import IO
+import yaml
 
 class SpectrometerCalibrationInterface(cmd.Cmd):
     intro = '''
@@ -11,12 +12,14 @@ Type help or ? to list commands.\n'''
     def __init__(self, spec):
         super(SpectrometerCalibrationInterface, self).__init__()
         self.spec = spec
+        self.calibration = {"max_wl":None, "min_wl":None, "wl_deg_ratio":None, "greater_wl_cw":None}
 
     def do_maxwl(self, max_wl: float):
         'Set maximum Spectrometer wavelength'
         try:
             max_wl = float(max_wl)
-            self.spec._max_wl = max_wl
+            #self.spec._max_wl = max_wl
+            self.calibration["max_wl"] = max_wl
         except:
             print("Wrong argument")
             print("max_wl should be float")
@@ -25,19 +28,20 @@ Type help or ? to list commands.\n'''
         'Set maximum Spectrometer wavelength'
         try:
             min_wl = float(min_wl)
-            self.spec._min_wl = min_wl
+            #self.spec._min_wl = min_wl
+            self.calibration["min_wl"] = min_wl
         except:
             print("Wrong argument")
             print("min_wl should be float")
     
     def do_growth_direction(self, arg):
         'Set wavelength growth direction for the monocromator motor'
-        self.gd_ui = GrowthDirection(self.spec)
+        self.gd_ui = GrowthDirection(self.spec, self.calibration)
         self.gd_ui.cmdloop()
 
     def do_wavelength_to_degree_ratio(self, arg):
         'Set wavelength to degree ratio for the spectrometer'
-        self.wl_to_gd_ui = WavelengthDegreeRatio(self.spec)
+        self.wl_to_gd_ui = WavelengthDegreeRatio(self.spec, self.calibration)
         self.wl_to_gd_ui.cmdloop()
 
     def do_quit(self, arg):
@@ -47,13 +51,22 @@ Type help or ? to list commands.\n'''
     def do_print_calibration(self, arg):
         'Prints currently configured calibartion'
         directions = {True:"Clockwise", False:"Counter Clockwise", None:"None"}
-        calibration_str = f'''
-Max wavelength:\t\t\t {self.spec._max_wl}
-Min wavelength:\t\t\t {self.spec._min_wl}
-Growth direction:\t\t {directions[self.spec._greater_wl_cw]}
-Wavelength to degree ratio:\t {self.spec._wl_deg_ratio}
-        '''
-        print(calibration_str)
+        for key in self.calibration:
+            print(f"{key}:\t\t\t{self.calibration[key]}")
+    
+    def do_save_to_yaml(self, path):
+        'Save calibration to yaml.\nInput filepath.'
+        if None in self.calibration.values():
+            print("At least one configuration parameter is not set.")
+            print("Set them first.")
+            return
+        try: 
+            path = str(path)
+            with open(path, "w") as f:
+                yaml.dump(self.calibration, f)
+        except:
+            print("Wrong argument")
+            print("You must input the file path for the calibration file")
 
 class WavelengthDegreeRatio(cmd.Cmd):
     intro='''
@@ -67,9 +80,10 @@ for a given angle change.
     '''
     prompt='(wavelength-degree-ratio)'
 
-    def __init__(self, spec):
+    def __init__(self, spec, calibration_dict):
         super(WavelengthDegreeRatio, self).__init__()
         self.spec = spec
+        self.calibration_dict = calibration_dict
         self._direction_dict = {True:"clockwise", False:"counter clockwise"}
 
     def do_start(self, arg):
@@ -83,7 +97,8 @@ for a given angle change.
         print("Calculating...")
         wl_deg_ratio = self.calculate_ratio()
         print(f"Setting wavelength to degree ratio to {wl_deg_ratio} nm/deg")
-        self.spec._wl_deg_ratio = wl_deg_ratio
+        #self.spec._wl_deg_ratio = wl_deg_ratio
+        self.calibration_dict["wl_deg_ratio"] = wl_deg_ratio
         self.onecmd('quit')
 
     def do_quit(self, arg):
@@ -137,7 +152,8 @@ for a given angle change.
         print(f"Rotation angle:\t {self.rotation_angle}")
         ratio = (self.final_wavelength - self.initial_wavelength)/self.rotation_angle
         print(f"(final_wl - initial_wl)/angle = {ratio}")
-        self.spec._wl_deg_ratio = ratio
+        #self.spec._wl_deg_ratio = ratio
+        self.calibration_dict["wl_deg_ratio"] = ratio
         
     
 class GrowthDirection(cmd.Cmd):
@@ -155,9 +171,10 @@ Input set_growth_direction to set the growth direction.
     '''
     prompt=f'(growth-direction)'
 
-    def __init__(self, spec):
+    def __init__(self, spec, calibration_dict):
         super(GrowthDirection, self).__init__()
         self.spec = spec
+        self.calibration_dict = calibration_dict
         self.steps = 1
         self.small_rotation = 10
         self.large_rotation = 100
@@ -183,10 +200,12 @@ Input set_growth_direction to set the growth direction.
 Usage: Input True for clowckwise or False for counter clockwise'''
         cw = cw.lower()
         if cw == "true":
-            self.spec._greater_wl_cw = True
+            #self.spec._greater_wl_cw = True
+            self.calibration_dict["greater_wl_cw"] = True
             return True
         elif cw == "false":
-            self.spec._greater_wl_cw = False
+            #self.spec._greater_wl_cw = False
+            self.calibration_dict["greater_wl_cw"] = False
             return True
         else:
             print("Wrong argument")
@@ -218,5 +237,4 @@ class TestSpec:
 if __name__ == '__main__':
     spec = TestSpec()
     hola = spec.calibrate()
-    print(hola)
 

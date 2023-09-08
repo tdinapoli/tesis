@@ -47,21 +47,21 @@ class A4988(abstract.MotorDriver):
     # Desconfigura a mano el step (por ejemplo poniendo 
     # driver.step.state = True), esta driver.step() no va a hacer lo
     # esperado (pensar cómo solucionar).
-    def step(self, ontime=10e-6, offtime=10e-6, amount=1):
+    def step(self, ontime=3e-3, offtime=3e-3, amount=1):
         self.pin_step.pulse(ontime, offtime, amount)
     
 
 class M061CS02(abstract.Motor):
     _STEPS_MODE = (200, 400, 800, 1600, 3200)
 
-    def __init__(self, driver, steps: int = 200, angle: float = 0.0):
+    def __init__(self, driver, steps: int = 400, angle: float = 0.0):
         self._driver = driver
         self._angle = angle
         self._angle_relative = angle % 360
         self.steps = steps
         self._min_angle = 360.0/self.steps
-        self._min_offtime = 10e-6
-        self._min_ontime = 10e-6
+        self._min_offtime = 3e-3
+        self._min_ontime = 3e-3
 
     def rotate(self, angle: float):
         relative_angle = angle - self._angle
@@ -71,9 +71,9 @@ class M061CS02(abstract.Motor):
     def rotate_relative(self, angle: float, change_angle: bool = True):
         cw, angle = angle > 0, abs(angle)
         self._driver.direction.set_state(cw)
-        steps = int(angle/self._min_angle)
+        steps = int(angle/self.min_angle)
         self.rotate_step(steps, cw, change_angle=change_angle)
-        angle_rotated = self._min_angle * steps
+        angle_rotated = (2 * cw - 1) * self.min_angle * steps
         return angle_rotated
 
     def rotate_step(self, steps: int, cw: bool, change_angle: bool = True):
@@ -105,7 +105,7 @@ class M061CS02(abstract.Motor):
     def steps(self, steps: int = 200):
         self._driver.set_stepping(self._STEPS_MODE.index(steps))
 
-    def set_origin(self, angle):
+    def set_origin(self, angle: float = 0):
         self._angle = angle
 
 class GPIO_helper:
@@ -173,7 +173,7 @@ class Spectrometer(abstract.Spectrometer):
             #setattr(self.__class__, param,
             #        property(fget=lambda self: getattr(self, f"_{param}")))
 
-    def calibrate_cmd(self):
+    def calibrate(self):
         ui.SpectrometerCalibrationInterface(self)
         # Esto no se hace pero por ahora lo resuelvo así. Cambiar
         self.load_calibration(self.calibration_path)

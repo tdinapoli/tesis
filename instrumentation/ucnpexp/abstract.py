@@ -25,9 +25,9 @@ class Spectrometer(ABC):
     def goto_wavelength(self, wavelength):
         pass
 
-    @abstractmethod
-    def _goto_wavelength(self, wavelength):
-        pass
+#    @abstractmethod
+#    def _goto_wavelength(self, wavelength):
+#        pass
 
 
 class TTL:

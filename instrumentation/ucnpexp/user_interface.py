@@ -12,7 +12,7 @@ Type help or ? to list commands.\n'''
     def __init__(self, spec):
         super(SpectrometerCalibrationInterface, self).__init__()
         self.spec = spec
-        self.calibration = {"max_wl":None, "min_wl":None, "wl_deg_ratio":None, "greater_wl_cw":None}
+        self.calibration = {"max_wl":None, "min_wl":None, "wl_step_ratio":None, "greater_wl_cw":None}
 
     def do_maxwl(self, max_wl: float):
         'Set maximum Spectrometer wavelength'
@@ -39,10 +39,10 @@ Type help or ? to list commands.\n'''
         self.gd_ui = GrowthDirection(self.spec, self.calibration)
         self.gd_ui.cmdloop()
 
-    def do_wavelength_to_degree_ratio(self, arg):
-        'Set wavelength to degree ratio for the spectrometer'
-        self.wl_to_gd_ui = WavelengthDegreeRatio(self.spec, self.calibration)
-        self.wl_to_gd_ui.cmdloop()
+    def do_wavelength_to_step_ratio(self, arg):
+        'Set wavelength to step ratio for the spectrometer'
+        self.wl_to_step_ui = WavelengthStepRatio(self.spec, self.calibration)
+        self.wl_to_step_ui.cmdloop()
 
     def do_quit(self, arg):
         'Quit calibration menu'
@@ -62,43 +62,45 @@ Type help or ? to list commands.\n'''
             return
         try: 
             path = str(path)
+            # Esto no se hace pero bueno por ahora lo hago así
+            self.spec.calibration_path = path
             with open(path, "w") as f:
                 yaml.dump(self.calibration, f)
         except:
             print("Wrong argument")
             print("You must input the file path for the calibration file")
 
-class WavelengthDegreeRatio(cmd.Cmd):
+class WavelengthStepRatio(cmd.Cmd):
     intro='''
-Wavelength to degree ratio of the spectrometer configuration menu.
+Wavelength to step ratio of the spectrometer configuration menu.
 Type help or ? to list commands.
 
 This menu aims to help you determine what is the value of the ratio
-(wl2 - wl1)/angle
+(wl2 - wl1)/steps
 that determines how much does wavelength change (from wl1 to wl2)
-for a given angle change.
+for a given step change.
     '''
-    prompt='(wavelength-degree-ratio)'
+    prompt='(wavelength-step-ratio)'
 
     def __init__(self, spec, calibration_dict):
-        super(WavelengthDegreeRatio, self).__init__()
+        super(WavelengthStepRatio, self).__init__()
         self.spec = spec
         self.calibration_dict = calibration_dict
         self._direction_dict = {True:"clockwise", False:"counter clockwise"}
 
     def do_start(self, arg):
-        'Start calibration of the wavelength to degree ratio'
+        'Start calibration of the wavelength to step ratio'
         done = False
         while not done:
             self.initial_wavelength = self.ask_wavelength()
-            self.rot_angle()
+            self.rot_steps()
             self.final_wavelength = self.ask_wavelength()
             done = self.ask_done()
         print("Calculating...")
-        wl_deg_ratio = self.calculate_ratio()
-        print(f"Setting wavelength to degree ratio to {wl_deg_ratio} nm/deg")
-        #self.spec._wl_deg_ratio = wl_deg_ratio
-        self.calibration_dict["wl_deg_ratio"] = wl_deg_ratio
+        wl_step_ratio = self.calculate_ratio()
+        print(f"Setting wavelength to step ratio to {wl_step_ratio} nm/step")
+        #self.spec._wl_step_ratio = wl_deg_ratio
+        self.calibration_dict["wl_step_ratio"] = wl_step_ratio
         self.onecmd('quit')
 
     def do_quit(self, arg):
@@ -106,14 +108,14 @@ for a given angle change.
         return True
 
     def calculate_ratio(self):
-        ratio = (self.final_wavelength - self.initial_wavelength)/self.rotation_angle
-        print(self.final_wavelength, self.initial_wavelength, self.rotation_angle)
+        ratio = (self.final_wavelength - self.initial_wavelength)/self.rotation_steps
+        print(self.final_wavelength, self.initial_wavelength, self.rotation_steps)
         return ratio
 
     def ask_done(self):
         print("Calibration parameters you input:")
         print(f"Initial wavelength:\t\t{self.initial_wavelength}")
-        print(f"Rotation angle:\t\t{self.rotation_angle}")
+        print(f"Rotation steps:\t\t{self.rotation_steps}")
         print(f"Final wavelength:\t\t{self.final_wavelength}")
         answer = input("Do you want to calculate wavelength to degree ratio?[Y/n]").lower()
         done = answer in ["y", ""]
@@ -121,16 +123,18 @@ for a given angle change.
             print("Aborting...")
         return done
 
-    def rot_angle(self):
-        angle = input("Input a rotation angle for the motor in degrees: ")
+    def rot_steps(self):
+        steps = input("Input the amount of steps the motor will rotate clockwise (+) or anti clockwise (-): ")
         try:
-            angle = float(angle)
-            self.rotation_angle = angle
-            self.rotation_angle = self.spec._motor.rotate_relative(self.rotation_angle)
-            print(f"Rotate {angle} degrees {self._direction_dict[self.rotation_angle > 0]}")
-        except:
+            steps = int(steps)
+            print(steps)
+            self.cw, self.rotation_steps = steps > 0, abs(steps)
+            self.spec._motor.rotate_step(self.rotation_steps, self.cw)
+            print(f"Rotate {self.rotation_steps} steps {self._direction_dict[self.cw]}")
+        except Exception as e:
+            print(e)
             print("Wrong argument")
-            print("Rotation angle should be a float")
+            print("Rotation steps should be an int")
     
     def ask_wavelength(self):
         keep_going  = True
@@ -149,11 +153,11 @@ for a given angle change.
         print("Calculating wavelength to degree ratio")
         print(f"Initial wavelength:\t {self.initial_wavelength}")
         print(f"Final wavelength:\t {self.final_wavelength}")
-        print(f"Rotation angle:\t {self.rotation_angle}")
-        ratio = (self.final_wavelength - self.initial_wavelength)/self.rotation_angle
-        print(f"(final_wl - initial_wl)/angle = {ratio}")
+        print(f"Rotation steps:\t {self.rotation_steps}")
+        ratio = (self.final_wavelength - self.initial_wavelength)/self.rotation_steps
+        print(f"(final_wl - initial_wl)/steps = {ratio}")
         #self.spec._wl_deg_ratio = ratio
-        self.calibration_dict["wl_deg_ratio"] = ratio
+        self.calibration_dict["wl_step_ratio"] = ratio
         
     
 class GrowthDirection(cmd.Cmd):
@@ -181,19 +185,19 @@ Input set_growth_direction to set the growth direction.
 
     def do_r(self, arg):
         'Rotate monochromator motor 10 steps clockwise'
-        self.spec._motor._rotate_step(self.small_rotation, True)
+        self.spec._motor.rotate_step(self.small_rotation, True)
 
     def do_l(self, arg):
         'Rotate monochromator motor 10 steps clockwise'
-        self.spec._motor._rotate_step(self.small_rotation, False)
+        self.spec._motor.rotate_step(self.small_rotation, False)
 
     def do_R(self, arg):
         'Rotate monochromator motor 100 steps clockwise'
-        self.spec._motor._rotate_step(self.large_rotation, True)
+        self.spec._motor.rotate_step(self.large_rotation, True)
 
     def do_L(self, arg):
         'Rotate monochromator motor 100 steps clockwise'
-        self.spec._motor._rotate_step(self.large_rotation, False)
+        self.spec._motor.rotate_step(self.large_rotation, False)
 
     def do_set_growth_direction(self, cw: str):
         '''Set wavelength growth direction.\n
@@ -215,7 +219,7 @@ class TestMotor:
     def __init__(self):
         self.directions = {True:"cw", False:'ccw'}
 
-    def _rotate_step(self, steps, direction):
+    def rotate_step(self, steps, direction):
         print(f"rotate {steps} steps in {self.directions[direction]} direction")
 
     def rotate_relative(self, angle):

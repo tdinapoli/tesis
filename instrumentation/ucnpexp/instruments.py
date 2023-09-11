@@ -47,7 +47,7 @@ class A4988(abstract.MotorDriver):
     # Desconfigura a mano el step (por ejemplo poniendo 
     # driver.step.state = True), esta driver.step() no va a hacer lo
     # esperado (pensar cómo solucionar).
-    def step(self, ontime=3e-3, offtime=3e-3, amount=1):
+    def step(self, ontime=10e-3, offtime=10e-3, amount=1):
         self.pin_step.pulse(ontime, offtime, amount)
     
 
@@ -60,8 +60,8 @@ class M061CS02(abstract.Motor):
         self._angle_relative = angle % 360
         self.steps = steps
         self._min_angle = 360.0/self.steps
-        self._min_offtime = 3e-3
-        self._min_ontime = 3e-3
+        self._min_offtime = 10e-3
+        self._min_ontime = 10e-3
 
     def rotate(self, angle: float):
         relative_angle = angle - self._angle
@@ -122,16 +122,16 @@ class GPIO_helper:
         return self.state
 
 class Spectrometer(abstract.Spectrometer):
-    CALIB_ATTRS = [ '_wl_deg_ratio',
+
+    def __init__(self, motor: abstract.Motor):
+        self.CALIB_ATTRS = [ '_wl_step_ratio',
                     '_greater_wl_cw',
                     '_max_wl',
                     '_min_wl',
                     '_wavelength']
-
-    def __init__(self, motor: abstract.Motor):
         self._motor = motor
         # Es necesario definir todas estas cosas? o directamente ni las defino
-        [setattr(self, f"_{calib_attr}", None) for calib_attr in CALIB_ATTRS]
+        [setattr(self, f"{calib_attr}", None) for calib_attr in self.CALIB_ATTRS]
 
     @classmethod
     def constructor_default(cls, conn, MOTOR_DRIVER=A4988, MOTOR=M061CS02):
@@ -151,16 +151,24 @@ class Spectrometer(abstract.Spectrometer):
 
     # Esto es necesario?
     def set_wavelength(self, wavelength: float):
-        self._wavelength = wavelength
+        if self.check_safety(wavelength):
+            self._wavelength = wavelength
+        else:
+            print(f"Wavelength must be between {self._min_wl} and {self._max_wl}")
 
     def check_safety(self, wavelength):
         # este check no parece muy bueno. Pensar cómo mejorarlo
+        #print(self._min_wl, wavelength, self._max_wl)
         return self._min_wl < wavelength < self._max_wl
 
     def goto_wavelength(self, wavelength: float):
-        angle = (wavelength - self._wavelength)/self._wl_deg_ratio
         if self.check_safety(wavelength):
-            self._motor.rotate_relative(angle)
+            steps = abs(int((wavelength - self._wavelength)/self._wl_step_ratio))
+            cw = (wavelength - self._wavelength) > 0
+            self._motor.rotate_step(steps, cw)
+            self._wavelength = wavelength
+        else:
+            print(f"Wavelength must be between {self._min_wl} and {self._max_wl}")
 
     def load_calibration(self, path): #wavelength
         with open(path, 'r') as f:
@@ -174,6 +182,8 @@ class Spectrometer(abstract.Spectrometer):
             #        property(fget=lambda self: getattr(self, f"_{param}")))
 
     def calibrate(self):
-        ui.SpectrometerCalibrationInterface(self)
+        print("arrancando a calibrar")
+        ui.SpectrometerCalibrationInterface(self).cmdloop()
+        print("terminando de calibrar")
         # Esto no se hace pero por ahora lo resuelvo así. Cambiar
         self.load_calibration(self.calibration_path)

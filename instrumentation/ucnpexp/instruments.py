@@ -149,7 +149,6 @@ class Spectrometer(abstract.Spectrometer):
         motor = MOTOR(driver)
         return cls(motor)
 
-    # Esto es necesario?
     def set_wavelength(self, wavelength: float):
         if self.check_safety(wavelength):
             self._wavelength = wavelength
@@ -159,7 +158,7 @@ class Spectrometer(abstract.Spectrometer):
     def check_safety(self, wavelength):
         # este check no parece muy bueno. Pensar cómo mejorarlo
         #print(self._min_wl, wavelength, self._max_wl)
-        return self._min_wl < wavelength < self._max_wl
+        return self._min_wl <= wavelength <= self._max_wl
 
     def goto_wavelength(self, wavelength: float):
         if self.check_safety(wavelength):
@@ -182,8 +181,6 @@ class Spectrometer(abstract.Spectrometer):
             #        property(fget=lambda self: getattr(self, f"_{param}")))
 
     def calibrate(self):
-        print("arrancando a calibrar")
         ui.SpectrometerCalibrationInterface(self).cmdloop()
-        print("terminando de calibrar")
         # Esto no se hace pero por ahora lo resuelvo así. Cambiar
         self.load_calibration(self.calibration_path)

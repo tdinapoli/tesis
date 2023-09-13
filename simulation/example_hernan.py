@@ -4,8 +4,8 @@ from poincare._utils import class_and_instance_method
 from typing_extensions import dataclass_transform
 
 import pint
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 ureg = pint.get_application_registry()
@@ -46,34 +46,27 @@ def initial(energy: float | pint.Quantity, *, default: Initial | None = None, in
 )
 class FluorescenceTransition(System):
 
-    low_state: State = initial(0., default=0)
-    high_state: State = initial(0., default=0)
+    ground: State = initial(0., default=0)
+    excited: State = initial(0., default=0)
 
-    rate: Parameter = assign(default=1)
+    rate: Parameter = assign(default=0)
 
-    val = rate * high_state
+    val = rate * excited
 
-    down = low_state.derive() << val
-    up = high_state.derive() << - val
+    down = ground.derive() << val
+    up = excited.derive() << - val
 
     @property
     def energy_difference(self) -> pint.Quantity:
-        return self.high_state.energy - self.low_state.energy
+        return self.excited.energy - self.ground.energy
 
-@dataclass_transform(
-    field_specifiers=(initial, )
-)
-class EnergyTransfer(System):
-    donator: State = initial(0., default=0)
-    acceptor: State = initial(0., default=0)
+class StateAbsorption(System):
+    ground: State = initial(0., default=0)
+    excited: State = initial(0., default=0)
 
-    rate: Parameter = assign(default=1)
+    rate: Parameter = assign(default=0)
 
-    val = rate * donator
-
-    donator_to_acceptor = donator.derive() << val
-    acceptor_to_donator = donator.derive() << -val
-
+    equation = FluorescenceTransition(ground=excited, excited=ground, rate=rate)
 
 @dataclass_transform(
     field_specifiers=(initial, )
@@ -121,29 +114,15 @@ class FluorescentSystem(System, abstract=True):
 
 class Example(FluorescentSystem):
 
-    N0: State = initial(0, default=1_000)
-    N1: State = initial(980 * ureg.nm, default=0)
-    N2: State = initial(490 * ureg.nm, default=0)
-    M0: State = initial(0, default=1_000)
-    M1: State = initial(980 * ureg.nm, default=0)
-    #an12: Parameter = assign(default=1)
+    N0: State = initial(0, default=0)
+    N1: State = initial(532 * ureg.nm, default=1_000)
 
-    measure_fluo = FluorescenceTransition(low_state=N0, high_state=N2, rate=0)
-    m0m1 = FluorescenceTransition(low_state=M0, high_state=M1)
-    n0n1 = FluorescenceTransition(low_state=N0, high_state=N1)
-    n1n2 = FluorescenceTransition(low_state=N1, high_state=N2, rate=0.1)
-    et_m1n1 = EnergyTransfer(donator=M1, acceptor=N1)
-    # El rate de et_m1n2 depende de n1 no?
-    #et_m1n2 = EnergyTransfer(donator=M1, acceptor=N2, rate=)
-    
+    fluo = FluorescenceTransition(ground=N0, excited=N1, rate=1)
+    fluo2 = StateAbsorption(ground=N0, excited=N1, rate=1)
 
-#print(Example.fluorescence_spectra("eV"))
-
-#print(Example.fluorescence_spectra("1/cm"))
-a = Example.fluorescence_spectra("nm")
-[print(f"{key} : a[key]") for key in a]
+print(Example.fluorescence_spectra("nm"))
 sim = Simulator(Example)
-result = sim.solve(times=np.linspace(0, 50, 1000))
+result = sim.solve(save_at=np.linspace(0, 50, 1000))
 result.plot()
 plt.show()
-#print(Example.fluorescence_spectra("Hz"))
+

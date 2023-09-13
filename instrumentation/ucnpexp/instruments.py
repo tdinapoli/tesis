@@ -169,6 +169,7 @@ class Spectrometer(abstract.Spectrometer):
         else:
             print(f"Wavelength must be between {self._min_wl} and {self._max_wl}")
 
+
     def load_calibration(self, path): #wavelength
         with open(path, 'r') as f:
             self._calibration = yaml.safe_load(f)
@@ -184,3 +185,16 @@ class Spectrometer(abstract.Spectrometer):
         ui.SpectrometerCalibrationInterface(self).cmdloop()
         # Esto no se hace pero por ahora lo resuelvo así. Cambiar
         self.load_calibration(self.calibration_path)
+
+    def get_spectrum(self,
+                     integration_time: float,
+                     starting_wavelength: float = self._min_wl,
+                     ending_wavelength: float = self._max_wl
+                     wavelength_step: float = self._wl_step_ratio
+                     ):
+        n_measurements = (ending_wavelength - starting_wavelength)/wavelength_step
+        measurements = np.zeros(n_measurements, dtype=float)
+        for i in range(n_measurements):
+            self.goto_wavelength(starting_wavelength + i * wavelength_step)
+            measurements[i] = self.get_intensity(integration_time)
+

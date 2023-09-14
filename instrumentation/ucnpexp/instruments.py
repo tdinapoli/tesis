@@ -124,6 +124,7 @@ class GPIO_helper:
 class Spectrometer(abstract.Spectrometer):
 
     def __init__(self, motor: abstract.Motor):
+        # Como puedo hacer que estas cosas sean una property?
         self.CALIB_ATTRS = [ '_wl_step_ratio',
                     '_greater_wl_cw',
                     '_max_wl',
@@ -132,6 +133,26 @@ class Spectrometer(abstract.Spectrometer):
         self._motor = motor
         # Es necesario definir todas estas cosas? o directamente ni las defino
         [setattr(self, f"{calib_attr}", None) for calib_attr in self.CALIB_ATTRS]
+
+    @property
+    def wavelength(self):
+        return self._wavelength
+
+    @property
+    def min_wl(self):
+        return self._min_wl
+
+    @property
+    def max_wl(self):
+        return self._max_wl
+
+    @property
+    def greater_wl_cw(self):
+        return self._greater_wl_cw
+
+    @property
+    def wl_step_ratio(self):
+        return self._wl_step_ratio
 
     @classmethod
     def constructor_default(cls, conn, MOTOR_DRIVER=A4988, MOTOR=M061CS02):
@@ -197,4 +218,7 @@ class Spectrometer(abstract.Spectrometer):
         for i in range(n_measurements):
             self.goto_wavelength(starting_wavelength + i * wavelength_step)
             measurements[i] = self.get_intensity(integration_time)
+
+    def get_intensity(self):
+        pass
 

@@ -4,6 +4,7 @@ import rpyc
 from . import user_interface as ui
 import numpy as np
 
+
 class RPTTL(abstract.TTL):
     def __init__(self, state, pin, gpio):
         column, number = pin
@@ -209,10 +210,16 @@ class Spectrometer(abstract.Spectrometer):
 
     def get_spectrum(self,
                      integration_time: float,
-                     starting_wavelength: float = self._min_wl,
-                     ending_wavelength: float = self._max_wl
-                     wavelength_step: float = self._wl_step_ratio
+                     starting_wavelength: float = None,
+                     ending_wavelength: float = None,
+                     wavelength_step: float = None
                      ):
+        if starting_wavelength is None:
+            starting_wavelength = self.min_wl
+        if ending_wavelength is None:
+            ending_wavelength = self.max_wl
+        if wavelength_step is None:
+            wavelength_step = self.wl_step_ratio
         n_measurements = (ending_wavelength - starting_wavelength)/wavelength_step
         measurements = np.zeros(n_measurements, dtype=float)
         for i in range(n_measurements):

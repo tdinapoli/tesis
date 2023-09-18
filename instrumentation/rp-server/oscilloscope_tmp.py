@@ -12,8 +12,7 @@ N = osc0.buffer_size
 osc0.trigger_pre  = 0
 osc0.trigger_post = N
 
-# disable hardware trigger sources
-osc0.trig_src = 0
+# disable hardware trigger sourceosc0.trig_src = 0
 
 # synchronization and trigger sources are the default,
 # which is the module itself

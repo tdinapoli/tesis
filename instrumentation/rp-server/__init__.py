@@ -27,19 +27,28 @@ class RPTTL:
     def __str__(self):
         return str(self.state)
 
+class OscilloscopeChannel:
+    def __init__(self, osc, channel, range, decimation=1,
+                  trigger_post=None, trigger_pre=0):
+        self.oscilloscope_channel = osc(channel, range)
+        if trigger_post is None:
+            self.trigger_post = self.oscilloscope_channel.buffer_size
+        self.oscilloscope_channel.trigger_pre = trigger_pre
 
-class TTL_Manager(rpyc.Service):
+
+class RPManager(rpyc.Service):
     def __init__(self):
         from redpitaya.overlay.mercury import mercury as FPGA
         overlay = FPGA()
         self.gpio = FPGA.gpio
+        self.osc = FPGA.osc
         self.exposed_ttls = {}
 
     def on_connect(self, conn):
-        print("TTL Manager connected")
+        print("RP Manager connected")
 
     def on_disconnect(self, conn):
-        print("TTL Manager disconnected")
+        print("RP Manager disconnected")
 
     def exposed_create_RPTTL(self, name, config):
         state, pin = config[0], config[1:]
@@ -47,9 +56,19 @@ class TTL_Manager(rpyc.Service):
         setattr(self, "exposed_{name}".format(name=name), ttl)
         return ttl
 
+    def exposed_create_osc_channel(self, channel, range, decimation=1,
+                                   trigger_post=None, trigger_pre=0):
+        oscilloscope_channel = OscilloscopeChannel(channel, range,
+                                                    decimation=decimation,
+                                                    trigger_post=trigger_post,
+                                                    trigger_pre=trigger_pre)
+        setattr(self, "exposed_oscilloscope_ch{channel}".format(channel=channel),
+                oscilloscope_channel)
+
+
 if __name__ == "__main__":
     from rpyc.utils.server import ThreadedServer
 
-    server = ThreadedServer(TTL_Manager(), port=18861)
+    server = ThreadedServer(RPManager(), port=18861)
     server.start()
 

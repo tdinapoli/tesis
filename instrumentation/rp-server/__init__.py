@@ -53,6 +53,9 @@ class OscilloscopeChannel:
     
     def exposed_set_trigger_pre(self, trigger_pre):
         self.osc.trigger_pre = trigger_pre
+
+    def exposed_set_trigger_post(self, trigger_post):
+        self.osc.trigger_post = trigger_post
     
 
 class RPManager(rpyc.Service):

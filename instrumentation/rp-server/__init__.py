@@ -89,6 +89,7 @@ class RPManager(rpyc.Service):
                                                     trigger_pre=trigger_pre)
         setattr(self, "exposed_oscilloscope_ch{channel}".format(channel=channel),
                 oscilloscope_channel)
+        return oscilloscope_channel
 
 
 if __name__ == "__main__":

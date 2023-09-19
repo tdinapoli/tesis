@@ -72,7 +72,6 @@ class A4988(abstract.MotorDriver):
     def step(self, ontime=10e-3, offtime=10e-3, amount=1):
         self.pin_step.pulse(ontime, offtime, amount)
     
-
 class M061CS02(abstract.Motor):
     _STEPS_MODE = (200, 400, 800, 1600, 3200)
 

@@ -267,6 +267,7 @@ class Spectrometer(abstract.Spectrometer):
         n_datapoints = measurements * self._osc.amount_datapoints
         return intensity_accum, intensity_squared_accum, n_datapoints
 
+    # Debería setear la escala vertical? ver en la rp
     def integrate(self, seconds):
         self._osc.set_measurement_time(seconds)
         return self._osc.measure()

@@ -254,12 +254,19 @@ class Spectrometer(abstract.Spectrometer):
             self.goto_wavelength(starting_wavelength + i * wavelength_step)
             measurements[i] = self.get_intensity(integration_time)
 
-    def get_intensity(self, measurements: int = 1):
+    def get_intensity(self, seconds, measurements: int = 1):
         intensity_accum = 0
         intensity_squared_accum = 0
+        # Este loop sería ideal que esté lo más cerca de la RP posible
+        # el problema es que igual no podemos medir de forma continua ahora
+        # así que da igual un delay de 10ms con uno de 100ms. 
         for _ in range(measurements):
-            data = self._osc.measure()
+            data = self.integrate(seconds)
             intensity_accum += sum(data)
             intensity_squared_accum += sum(data*data)
         n_datapoints = measurements * self._osc.amount_datapoints
         return intensity_accum, intensity_squared_accum, n_datapoints
+
+    def integrate(self, seconds):
+        self._osc.set_measurement_time(seconds)
+        return self._osc.measure()

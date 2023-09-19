@@ -38,6 +38,9 @@ class OscilloscopeChannel:
     def exposed_measure(self):
         self.osc.reset()
         self.osc.start()
+        # acá probablemente tenga que agregar un sleep o algo así pq
+        # Si trigger_pre es >0 debería dejar al osciloscopio correr un rato
+        # Antes de apretar el trigger para que tome datos.
         self.osc.trigger()
         while (self.osc.status_run()):
             pass

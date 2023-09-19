@@ -18,6 +18,10 @@ class OscilloscopeChannel:
 
     def get_measurement_time(self):
         return self.amount_datapoints * self.osc.decimation / self._maximum_sampling_rate
+
+    # Debería cambiarle el nombre a trigger no?
+    def measure(self):
+        data = self.osc.measure()
     
     @property
     def amount_datapoints(self):
@@ -144,7 +148,7 @@ class GPIO_helper:
 
 class Spectrometer(abstract.Spectrometer):
 
-    def __init__(self, motor: abstract.Motor):
+    def __init__(self, motor: abstract.Motor, osc: OscilloscopeChannel):
         # Como puedo hacer que estas cosas sean una property?
         self.CALIB_ATTRS = [ '_wl_step_ratio',
                     '_greater_wl_cw',
@@ -152,6 +156,7 @@ class Spectrometer(abstract.Spectrometer):
                     '_min_wl',
                     '_wavelength']
         self._motor = motor
+        self._osc = osc
         # Es necesario definir todas estas cosas? o directamente ni las defino
         [setattr(self, f"{calib_attr}", None) for calib_attr in self.CALIB_ATTRS]
 
@@ -176,7 +181,8 @@ class Spectrometer(abstract.Spectrometer):
         return self._wl_step_ratio
 
     @classmethod
-    def constructor_default(cls, conn, MOTOR_DRIVER=A4988, MOTOR=M061CS02):
+    def constructor_default(cls, conn, MOTOR_DRIVER=A4988, MOTOR=M061CS02,
+                             OSCILLOSCOPE_CHANNEL=OscilloscopeChannel):
         ttls = {
                 'notenable' :   conn.root.create_RPTTL('notenable', (False, 'n', 0)),
                 'ms1'       :   conn.root.create_RPTTL('ms1', (False, 'n', 1)),
@@ -189,7 +195,9 @@ class Spectrometer(abstract.Spectrometer):
                 }
         driver = MOTOR_DRIVER(ttls)
         motor = MOTOR(driver)
-        return cls(motor)
+        osc = OSCILLOSCOPE_CHANNEL(conn, channel=0, voltage_range=20.0,
+                                   decimation=1, trigger_post=None, trigger_pre=0)
+        return cls(motor, osc)
 
     def set_wavelength(self, wavelength: float):
         if self.check_safety(wavelength):
@@ -246,6 +254,12 @@ class Spectrometer(abstract.Spectrometer):
             self.goto_wavelength(starting_wavelength + i * wavelength_step)
             measurements[i] = self.get_intensity(integration_time)
 
-    def get_intensity(self):
-        pass
-
+    def get_intensity(self, measurements: int = 1):
+        intensity_accum = 0
+        intensity_squared_accum = 0
+        for _ in range(measurements):
+            data = self._osc.measure()
+            intensity_accum += sum(data)
+            intensity_squared_accum += sum(data*data)
+        n_datapoints = measurements * self._osc.amount_datapoints
+        return intensity_accum, intensity_squared_accum, n_datapoints

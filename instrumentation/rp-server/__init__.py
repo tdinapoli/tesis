@@ -46,6 +46,11 @@ class OscilloscopeChannel:
             print("Warning: the amount of data points asked for is greater than the buffer size")
         return self.osc.data(data_points)
 
+    def exposed_set_decimation(self, decimation_exponent):
+        if decimation_exponent not in range(0, 18):
+            print("Warning: decimation should be a power of 2 between 0 and 17")
+        self.decimation = 2**decimation_exponent
+
 
 class RPManager(rpyc.Service):
     def __init__(self):

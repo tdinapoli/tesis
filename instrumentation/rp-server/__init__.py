@@ -30,10 +30,21 @@ class RPTTL:
 class OscilloscopeChannel:
     def __init__(self, osc, channel, range, decimation=1,
                   trigger_post=None, trigger_pre=0):
-        self.oscilloscope_channel = osc(channel, range)
+        self.osc = osc(channel, range)
         if trigger_post is None:
-            self.trigger_post = self.oscilloscope_channel.buffer_size
-        self.oscilloscope_channel.trigger_pre = trigger_pre
+            self.trigger_post = self.osc.buffer_size
+        self.osc.trigger_pre = trigger_pre
+    
+    def exposed_measure(self):
+        self.osc.reset()
+        self.osc.start()
+        self.osc.trigger()
+        while (self.osc.status_run()):
+            pass
+        data_points = self.trigger_pre + self.trigger_post
+        if data_points > self.osc.buffer_size:
+            print("Warning: the amount of data points asked for is greater than the buffer size")
+        return self.osc.data(data_points)
 
 
 class RPManager(rpyc.Service):
@@ -58,7 +69,7 @@ class RPManager(rpyc.Service):
 
     def exposed_create_osc_channel(self, channel, range, decimation=1,
                                    trigger_post=None, trigger_pre=0):
-        oscilloscope_channel = OscilloscopeChannel(channel, range,
+        oscilloscope_channel = OscilloscopeChannel(self.osc, channel, range,
                                                     decimation=decimation,
                                                     trigger_post=trigger_post,
                                                     trigger_pre=trigger_pre)

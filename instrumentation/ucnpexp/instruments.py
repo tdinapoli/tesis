@@ -6,7 +6,11 @@ import numpy as np
 
 class OscilloscopeChannel:
     # Hay una mejor forma de hacer esto no? tipo con **kwargs o *args o algo así
-    def __init__(self, channel, range, decimation, trigger_post, trigger_pre):
+    def __init__(self, conn, channel, voltage_range, decimation, trigger_post, trigger_pre):
+        self.osc = conn.root.create_osc_channel(channel, voltage_range, decimation,
+                                                 trigger_post, trigger_pre)
+    def set_measurement_time(self, seconds):
+
 
 class RPTTL(abstract.TTL):
     def __init__(self, state, pin, gpio):

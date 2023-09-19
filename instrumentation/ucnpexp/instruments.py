@@ -7,10 +7,24 @@ import numpy as np
 class OscilloscopeChannel:
     # Hay una mejor forma de hacer esto no? tipo con **kwargs o *args o algo así
     def __init__(self, conn, channel, voltage_range, decimation, trigger_post, trigger_pre):
+        self._maximum_sampling_rate = 125e6
         self.osc = conn.root.create_osc_channel(channel, voltage_range, decimation,
                                                  trigger_post, trigger_pre)
-    def set_measurement_time(self, seconds):
 
+    def set_measurement_time(self, seconds):
+        decimation_exponent = int(np.ceil(np.log2(self._maximum_sampling_rate * seconds / self.amount_datapoints)))
+        self.osc.set_decimation(decimation_exponent)
+        print(f"Setting measurement time to {self.get_measurement_time} seconds")
+
+    def get_measurement_time(self):
+        return self.amount_datapoints * self.osc.decimation / self._maximum_sampling_rate
+    
+    @property
+    def amount_datapoints(self):
+        amount = self.osc.trigger_pre + self.osc.trigger_post 
+        if amount > self.osc.buffer_size:
+            print("Warning: amount of data points is greater than buffer size")
+        return amount
 
 class RPTTL(abstract.TTL):
     def __init__(self, state, pin, gpio):

@@ -32,7 +32,7 @@ class OscilloscopeChannel:
                   trigger_post=None, trigger_pre=0):
         self.osc = osc(channel, range)
         if trigger_post is None:
-            self.trigger_post = self.osc.buffer_size
+            self.osc.trigger_post = self.osc.buffer_size
         self.osc.trigger_pre = trigger_pre
     
     def exposed_measure(self):
@@ -49,8 +49,11 @@ class OscilloscopeChannel:
     def exposed_set_decimation(self, decimation_exponent):
         if decimation_exponent not in range(0, 18):
             print("Warning: decimation should be a power of 2 between 0 and 17")
-        self.decimation = 2**decimation_exponent
-
+        self.osc.decimation = 2**decimation_exponent
+    
+    def exposed_set_trigger_pre(self, trigger_pre):
+        self.osc.trigger_pre = trigger_pre
+    
 
 class RPManager(rpyc.Service):
     def __init__(self):

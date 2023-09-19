@@ -4,6 +4,9 @@ import rpyc
 from . import user_interface as ui
 import numpy as np
 
+class OscilloscopeChannel:
+    # Hay una mejor forma de hacer esto no? tipo con **kwargs o *args o algo así
+    def __init__(self, channel, range, decimation, trigger_post, trigger_pre):
 
 class RPTTL(abstract.TTL):
     def __init__(self, state, pin, gpio):

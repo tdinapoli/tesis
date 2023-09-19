@@ -28,9 +28,9 @@ class RPTTL:
         return str(self.state)
 
 class OscilloscopeChannel:
-    def __init__(self, osc, channel, range, decimation=1,
+    def __init__(self, osc, channel, voltage_range, decimation=1,
                   trigger_post=None, trigger_pre=0):
-        self.osc = osc(channel, range)
+        self.osc = osc(channel, voltage_range)
         if trigger_post is None:
             self.osc.trigger_post = self.osc.buffer_size
         self.osc.trigger_pre = trigger_pre
@@ -81,9 +81,9 @@ class RPManager(rpyc.Service):
         setattr(self, "exposed_{name}".format(name=name), ttl)
         return ttl
 
-    def exposed_create_osc_channel(self, channel, range, decimation=1,
+    def exposed_create_osc_channel(self, channel, voltage_range, decimation=1,
                                    trigger_post=None, trigger_pre=0):
-        oscilloscope_channel = OscilloscopeChannel(self.osc, channel, range,
+        oscilloscope_channel = OscilloscopeChannel(self.osc, channel, voltage_range,
                                                     decimation=decimation,
                                                     trigger_post=trigger_post,
                                                     trigger_pre=trigger_pre)

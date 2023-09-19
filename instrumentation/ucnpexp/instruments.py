@@ -240,7 +240,8 @@ class Spectrometer(abstract.Spectrometer):
                      integration_time: float,
                      starting_wavelength: float = None,
                      ending_wavelength: float = None,
-                     wavelength_step: float = None
+                     wavelength_step: float = None,
+                     rounds: int = 1
                      ):
         if starting_wavelength is None:
             starting_wavelength = self.min_wl
@@ -249,22 +250,25 @@ class Spectrometer(abstract.Spectrometer):
         if wavelength_step is None:
             wavelength_step = self.wl_step_ratio
         n_measurements = (ending_wavelength - starting_wavelength)/wavelength_step
-        measurements = np.zeros(n_measurements, dtype=float)
+        intensity_accum = np.zeros(n_measurements, dtype=float)
+        intensity_squared_accum = np.zeros(n_measurements, dtype=float)
         for i in range(n_measurements):
             self.goto_wavelength(starting_wavelength + i * wavelength_step)
-            measurements[i] = self.get_intensity(integration_time)
+            intensity_accum[i], intensity_squared_accum[i], n_datapoints \
+                                = self.get_intensity(integration_time, rounds)
+        return intensity_accum, intensity_squared_accum, n_datapoints
 
-    def get_intensity(self, seconds, measurements: int = 1):
+    def get_intensity(self, seconds, rounds: int = 1):
         intensity_accum = 0
         intensity_squared_accum = 0
         # Este loop sería ideal que esté lo más cerca de la RP posible
         # el problema es que igual no podemos medir de forma continua ahora
         # así que da igual un delay de 10ms con uno de 100ms. 
-        for _ in range(measurements):
+        for _ in range(rounds):
             data = self.integrate(seconds)
             intensity_accum += sum(data)
             intensity_squared_accum += sum(data*data)
-        n_datapoints = measurements * self._osc.amount_datapoints
+        n_datapoints = rounds * self._osc.amount_datapoints
         return intensity_accum, intensity_squared_accum, n_datapoints
 
     # Debería setear la escala vertical? ver en la rp

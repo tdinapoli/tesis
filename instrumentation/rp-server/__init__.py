@@ -59,6 +59,12 @@ class OscilloscopeChannel:
 
     def exposed_set_trigger_post(self, trigger_post):
         self.osc.trigger_post = trigger_post
+
+    def exposed_decimation(self):
+        return self.osc.decimation
+
+    def exposed_buffer_size(self):
+        return self.osc.buffer_size
     
 
 class RPManager(rpyc.Service):

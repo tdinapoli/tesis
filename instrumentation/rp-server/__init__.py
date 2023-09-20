@@ -34,6 +34,7 @@ class OscilloscopeChannel:
         if trigger_post is None:
             self.osc.trigger_post = self.osc.buffer_size
         self.osc.trigger_pre = trigger_pre
+        self._maximum_sampling_rate = 125e6
     
     def exposed_measure(self):
         self.osc.reset()
@@ -41,6 +42,7 @@ class OscilloscopeChannel:
         # acá probablemente tenga que agregar un sleep o algo así pq
         # Si trigger_pre es >0 debería dejar al osciloscopio correr un rato
         # Antes de apretar el trigger para que tome datos.
+        time.sleep(self.trigger_pre * self.decimation / self._maximum_sampling_rate)
         self.osc.trigger()
         while (self.osc.status_run()):
             pass
@@ -87,7 +89,7 @@ class RPManager(rpyc.Service):
         setattr(self, "exposed_{name}".format(name=name), ttl)
         return ttl
 
-    def exposed_create_osc_channel(self, channel, voltage_range, decimation=1,
+    def exposed_create_osc_channel(self, *, channel, voltage_range, decimation=1,
                                    trigger_post=None, trigger_pre=0):
         oscilloscope_channel = OscilloscopeChannel(self.osc, channel, voltage_range,
                                                     decimation=decimation,

@@ -36,7 +36,11 @@ class OscilloscopeChannel:
         self.osc.trigger_pre = trigger_pre
         self._maximum_sampling_rate = 125e6
     
-    def exposed_measure(self):
+    def exposed_measure(self, data_points=None):
+        if data_points is None:
+            data_points = self.osc.buffer_size
+        if data_points > self.osc.buffer_size:
+            print("Warning: the amount of data points asked for is greater than the buffer size")
         self.osc.reset()
         self.osc.start()
         # acá probablemente tenga que agregar un sleep o algo así pq
@@ -46,9 +50,6 @@ class OscilloscopeChannel:
         self.osc.trigger()
         while (self.osc.status_run()):
             pass
-        data_points = self.trigger_pre + self.trigger_post
-        if data_points > self.osc.buffer_size:
-            print("Warning: the amount of data points asked for is greater than the buffer size")
         return self.osc.data(data_points)
 
     def exposed_set_decimation(self, decimation_exponent):

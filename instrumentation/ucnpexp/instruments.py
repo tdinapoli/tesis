@@ -5,23 +5,36 @@ from . import user_interface as ui
 import numpy as np
 
 class OscilloscopeChannel:
-    # Hay una mejor forma de hacer esto no? tipo con **kwargs o *args o algo así
-    def __init__(self, conn, channel, voltage_range, decimation, trigger_post, trigger_pre):
+    def __init__(self, conn, *, channel= 0, voltage_range=20.0,
+                  decimation=1, trigger_post=2**14, trigger_pre=0):
         self._maximum_sampling_rate = 125e6
-        self.osc = conn.root.create_osc_channel(channel, voltage_range, decimation,
-                                                 trigger_post, trigger_pre)
+        self.osc = conn.root.create_osc_channel(channel=channel,
+                                                voltage_range=voltage_range,
+                                                decimation=decimation,
+                                                trigger_post=trigger_post,
+                                                trigger_pre=trigger_pre)
 
-    def set_measurement_time(self, seconds):
-        decimation_exponent = int(np.ceil(np.log2(self._maximum_sampling_rate * seconds / self.amount_datapoints)))
+    def set_measurement_time(self, seconds, offset=0):
+        # Debería agregarle error o algo si seconds < offset
+        decimation_exponent = int(np.ceil(np.log2(
+            self._maximum_sampling_rate * seconds / self.amount_datapoints
+            )))
         self.osc.set_decimation(decimation_exponent)
-        print(f"Setting measurement time to {self.get_measurement_time} seconds")
+        self.osc.trigger_pre = offset / self.sampling_rate
+        self.osc.trigger_post = (seconds - offset) / self.sampling_rate
+        print(f"Setting decimation exponent to {decimation_exponent}")
+        print(f"The sampling rate is {self._maximum_sampling_rate/self.osc.decimation} Hz")
+        print(f"Setting trigger_pre to {self.osc.trigger_pre}")
+        print(f"Setting trigger_post to {self.osc.trigger_post}")
+        print(f"A total of {self.amount_datapoints} data points will be taken")
+        print(f"Measurement time will be {self.get_measurement_time}")
 
     def get_measurement_time(self):
-        return self.amount_datapoints * self.osc.decimation / self._maximum_sampling_rate
+        return self.amount_datapoints / self.sampling_rate
 
     # Debería cambiarle el nombre a trigger no?
     def measure(self):
-        data = self.osc.measure()
+        return self.osc.measure(self.amount_datapoints)
     
     @property
     def amount_datapoints(self):
@@ -29,6 +42,10 @@ class OscilloscopeChannel:
         if amount > self.osc.buffer_size:
             print("Warning: amount of data points is greater than buffer size")
         return amount
+
+    @property
+    def sampling_rate(self):
+        return self._maximum_sampling_rate/self.osc.decimation
 
 class RPTTL(abstract.TTL):
     def __init__(self, state, pin, gpio):
@@ -207,7 +224,6 @@ class Spectrometer(abstract.Spectrometer):
 
     def check_safety(self, wavelength):
         # este check no parece muy bueno. Pensar cómo mejorarlo
-        #print(self._min_wl, wavelength, self._max_wl)
         return self._min_wl <= wavelength <= self._max_wl
 
     def goto_wavelength(self, wavelength: float):

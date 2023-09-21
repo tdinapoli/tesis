@@ -33,6 +33,8 @@ class OscilloscopeChannel:
         self.osc = osc(channel, voltage_range)
         if trigger_post is None:
             self.osc.trigger_post = self.osc.buffer_size
+        else:
+            self.osc.trigger_post = trigger_post
         self.osc.trigger_pre = trigger_pre
         self._maximum_sampling_rate = 125e6
     
@@ -46,7 +48,7 @@ class OscilloscopeChannel:
         # acá probablemente tenga que agregar un sleep o algo así pq
         # Si trigger_pre es >0 debería dejar al osciloscopio correr un rato
         # Antes de apretar el trigger para que tome datos.
-        time.sleep(self.trigger_pre * self.decimation / self._maximum_sampling_rate)
+        time.sleep(self.osc.trigger_pre * self.osc.decimation / self._maximum_sampling_rate)
         self.osc.trigger()
         while (self.osc.status_run()):
             pass
@@ -58,17 +60,30 @@ class OscilloscopeChannel:
         self.osc.decimation = 2**decimation_exponent
     
     def exposed_set_trigger_pre(self, trigger_pre):
-        self.osc.trigger_pre = trigger_pre
+        print(trigger_pre)
+        self.osc.trigger_pre = int(trigger_pre)
 
     def exposed_set_trigger_post(self, trigger_post):
-        self.osc.trigger_post = trigger_post
+        print(trigger_post)
+        self.osc.trigger_post = int(trigger_post)
 
     def exposed_decimation(self):
         return self.osc.decimation
 
     def exposed_buffer_size(self):
         return self.osc.buffer_size
+
+    def exposed_trigger_pre(self):
+        return self.osc.trigger_pre
     
+    def exposed_trigger_post(self):
+        return self.osc.trigger_post
+
+    def exposed_decimation(self):
+        return self.osc.decimation
+
+    def exposed_buffer_size(self):
+        return self.osc.buffer_size
 
 class RPManager(rpyc.Service):
     def __init__(self):
@@ -103,6 +118,7 @@ class RPManager(rpyc.Service):
 
 if __name__ == "__main__":
     from rpyc.utils.server import ThreadedServer
+    rpyc.core.protocol.DEFAULT_CONFIG['allow_pickle'] = True
 
     server = ThreadedServer(RPManager(), port=18861)
     server.start()

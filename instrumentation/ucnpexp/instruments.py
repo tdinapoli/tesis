@@ -174,8 +174,6 @@ class Spectrometer(abstract.Spectrometer):
                     '_wavelength']
         self._motor = motor
         self._osc = osc
-        # Es necesario definir todas estas cosas? o directamente ni las defino
-        [setattr(self, f"{calib_attr}", None) for calib_attr in self.CALIB_ATTRS]
 
     @property
     def wavelength(self):

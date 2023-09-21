@@ -19,15 +19,15 @@ class OscilloscopeChannel:
         decimation_exponent = int(np.ceil(np.log2(
             self._maximum_sampling_rate * seconds / self.amount_datapoints
             )))
-        self.osc.set_decimation(decimation_exponent)
-        self.osc.trigger_pre = offset / self.sampling_rate
-        self.osc.trigger_post = (seconds - offset) / self.sampling_rate
+        self.decimation = decimation_exponent
+        self.trigger_pre = offset * self.sampling_rate
+        self.trigger_post = (seconds - offset) * self.sampling_rate
         print(f"Setting decimation exponent to {decimation_exponent}")
-        print(f"The sampling rate is {self._maximum_sampling_rate/self.osc.decimation} Hz")
-        print(f"Setting trigger_pre to {self.osc.trigger_pre}")
-        print(f"Setting trigger_post to {self.osc.trigger_post}")
+        print(f"The sampling rate is {self._maximum_sampling_rate/self.decimation} Hz")
+        print(f"Setting trigger_pre to {self.trigger_pre}")
+        print(f"Setting trigger_post to {self.trigger_post}")
         print(f"A total of {self.amount_datapoints} data points will be taken")
-        print(f"Measurement time will be {self.get_measurement_time}")
+        print(f"Measurement time will be {self.get_measurement_time()}")
 
     def get_measurement_time(self):
         return self.amount_datapoints / self.sampling_rate
@@ -38,14 +38,42 @@ class OscilloscopeChannel:
     
     @property
     def amount_datapoints(self):
-        amount = self.osc.trigger_pre + self.osc.trigger_post 
-        if amount > self.osc.buffer_size:
+        amount = self.trigger_pre + self.trigger_post 
+        if amount > self.buffer_size:
             print("Warning: amount of data points is greater than buffer size")
         return amount
+    
+    @property
+    def buffer_size(self):
+        return self.osc.buffer_size()
 
     @property
     def sampling_rate(self):
-        return self._maximum_sampling_rate/self.osc.decimation
+        return self._maximum_sampling_rate/self.decimation
+
+    @property
+    def trigger_pre(self):
+        return self.osc.trigger_pre()
+
+    @trigger_pre.setter
+    def trigger_pre(self, amount):
+        self.osc.set_trigger_pre(amount)
+
+    @property
+    def trigger_post(self):
+        return self.osc.trigger_post()
+
+    @trigger_post.setter
+    def trigger_post(self, amount):
+        self.osc.set_trigger_post(amount)
+
+    @property
+    def decimation(self):
+        return self.osc.decimation()
+    
+    @decimation.setter
+    def decimation(self, amount):
+        self.osc.set_decimation(amount)
 
 class RPTTL(abstract.TTL):
     def __init__(self, state, pin, gpio):

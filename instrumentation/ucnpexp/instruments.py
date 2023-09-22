@@ -33,8 +33,9 @@ class OscilloscopeChannel:
         return self.amount_datapoints / self.sampling_rate
 
     # Debería cambiarle el nombre a trigger no?
-    def measure(self):
-        return self.osc.measure(self.amount_datapoints)
+    def measure(self, transit_seconds=0.01):
+        return self.osc.measure(data_points=self.amount_datapoints,
+                                transit_seconds=transit_seconds)
     
     @property
     def amount_datapoints(self):

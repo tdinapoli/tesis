@@ -75,6 +75,12 @@ class OscilloscopeChannel:
     def decimation(self, amount):
         self.osc.set_decimation(amount)
 
+    # Esto tira algún tipo de warning que después 
+    # Tengo que ver qué significa
+    # Pero por ahora parece que funciona
+    def __del__(self):
+        self.osc.delete()
+
 class RPTTL(abstract.TTL):
     def __init__(self, state, pin, gpio):
         column, number = pin

@@ -31,6 +31,7 @@ class OscilloscopeChannel:
     def __init__(self, osc, channel, voltage_range, decimation=1,
                   trigger_post=None, trigger_pre=0):
         self.osc = osc(channel, voltage_range)
+        self._channel = channel
         if trigger_post is None:
             self.osc.trigger_post = self.osc.buffer_size
         else:
@@ -84,6 +85,12 @@ class OscilloscopeChannel:
 
     def exposed_buffer_size(self):
         return self.osc.buffer_size
+
+    # Esto tira algún tipo de warning que después 
+    # Tengo que ver qué significa
+    # Pero por ahora parece que funciona
+    def exposed_delete(self):
+        del self.osc
 
 class RPManager(rpyc.Service):
     def __init__(self):

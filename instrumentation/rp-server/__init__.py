@@ -43,7 +43,7 @@ class OscilloscopeChannel:
         if data_points is None:
             data_points = self.osc.buffer_size
         if data_points > self.osc.buffer_size:
-            print("Warning: the amount of data points asked for is greater than the buffer size")
+            print("Warning: the amount of data points {data_points} asked for is greater than the buffer size".format(data_points=data_points))
         self.osc.reset()
         self.osc.start()
         time.sleep(transit_seconds)
@@ -58,15 +58,13 @@ class OscilloscopeChannel:
 
     def exposed_set_decimation(self, decimation_exponent):
         if decimation_exponent not in range(0, 18):
-            print("Warning: decimation should be a power of 2 between 0 and 17")
+            print("Warning: decimation should be a power of 2 between 0 and 17, not", decimation_exponent)
         self.osc.decimation = 2**decimation_exponent
     
     def exposed_set_trigger_pre(self, trigger_pre):
-        print(trigger_pre)
         self.osc.trigger_pre = int(trigger_pre)
 
     def exposed_set_trigger_post(self, trigger_post):
-        print(trigger_post)
         self.osc.trigger_post = int(trigger_post)
 
     def exposed_decimation(self):
@@ -115,6 +113,14 @@ class RPManager(rpyc.Service):
 
     def exposed_create_osc_channel(self, *, channel, voltage_range, decimation=1,
                                    trigger_post=None, trigger_pre=0):
+        #try:
+        #    osc_ch = getattr(self, "exposed_oscilloscope_ch{channel}".format(channel=channel))
+        #    osc_ch.exposed_delete()
+        #    print("Deleting oscilloscope channel {channel}".format(channel=channel))
+        #    time.sleep(1)
+        #except:
+        #    pass
+
         oscilloscope_channel = OscilloscopeChannel(self.osc, channel, voltage_range,
                                                     decimation=decimation,
                                                     trigger_post=trigger_post,

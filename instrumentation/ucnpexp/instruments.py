@@ -17,7 +17,7 @@ class OscilloscopeChannel:
     def set_measurement_time(self, seconds, offset=0):
         # Debería agregarle error o algo si seconds < offset
         decimation_exponent = int(np.ceil(np.log2(
-            self._maximum_sampling_rate * seconds / self.amount_datapoints
+            self._maximum_sampling_rate * seconds / self.buffer_size
             )))
         self.decimation = decimation_exponent
         self.trigger_pre = offset * self.sampling_rate
@@ -261,8 +261,10 @@ class Spectrometer(abstract.Spectrometer):
 
     def goto_wavelength(self, wavelength: float):
         if self.check_safety(wavelength):
-            steps = abs(int((wavelength - self._wavelength)/self._wl_step_ratio))
-            cw = (wavelength - self._wavelength) > 0
+            steps = abs(int((wavelength - self.wavelength)/self._wl_step_ratio))
+            cw = (wavelength - self.wavelength) > 0
+            cw = not (cw ^ self.greater_wl_cw)
+            print(cw)
             self._motor.rotate_step(steps, cw)
             self._wavelength = wavelength
         else:
@@ -298,13 +300,12 @@ class Spectrometer(abstract.Spectrometer):
             ending_wavelength = self.max_wl
         if wavelength_step is None:
             wavelength_step = self.wl_step_ratio
-        n_measurements = (ending_wavelength - starting_wavelength)/wavelength_step
+        n_measurements = int((ending_wavelength - starting_wavelength)/wavelength_step)
         intensity_accum = np.zeros(n_measurements, dtype=float)
         intensity_squared_accum = np.zeros(n_measurements, dtype=float)
         for i in range(n_measurements):
             self.goto_wavelength(starting_wavelength + i * wavelength_step)
-            intensity_accum[i], intensity_squared_accum[i], n_datapoints \
-                                = self.get_intensity(integration_time, rounds)
+            intensity_accum[i], intensity_squared_accum[i], n_datapoints = self.get_intensity(integration_time, rounds)
         return intensity_accum, intensity_squared_accum, n_datapoints
 
     def get_intensity(self, seconds, rounds: int = 1):
@@ -315,8 +316,8 @@ class Spectrometer(abstract.Spectrometer):
         # así que da igual un delay de 10ms con uno de 100ms. 
         for _ in range(rounds):
             data = self.integrate(seconds)
-            intensity_accum += sum(data)
-            intensity_squared_accum += sum(data*data)
+            intensity_accum += np.sum(data)
+            intensity_squared_accum += np.sum(data*data)
         n_datapoints = rounds * self._osc.amount_datapoints
         return intensity_accum, intensity_squared_accum, n_datapoints
 

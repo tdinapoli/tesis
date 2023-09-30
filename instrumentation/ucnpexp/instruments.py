@@ -234,12 +234,6 @@ class Spectrometer(abstract.Spectrometer):
     def constructor_default(cls, conn, MOTOR_DRIVER=A4988, MOTOR=M061CS02,
                              OSCILLOSCOPE_CHANNEL=OscilloscopeChannel):
         ttls = {
-                'notenable' :   conn.root.create_RPTTL('notenable', (False, 'n', 0)),
-                'ms1'       :   conn.root.create_RPTTL('ms1', (False, 'n', 1)),
-                'ms2'       :   conn.root.create_RPTTL('ms2', (False, 'n', 2)),
-                'ms3'       :   conn.root.create_RPTTL('ms3', (False, 'n', 3)),
-                'notreset'  :   conn.root.create_RPTTL('notreset', (True, 'n', 4)),
-                'notsleep'  :   conn.root.create_RPTTL('notsleep', (True, 'n', 5)),
                 'pin_step'  :   conn.root.create_RPTTL('pin_step', (False, 'n', 6)),
                 'direction' :   conn.root.create_RPTTL('direction', (True, 'p', 7)),
                 }

@@ -325,3 +325,8 @@ class Spectrometer(abstract.Spectrometer):
     def integrate(self, seconds):
         self._osc.set_measurement_time(seconds)
         return self._osc.measure()
+
+class QuantaMaster810:
+    def __init__(self, spectrometer: Spectrometer, lamp: Monochromator) -> None:
+        self.spectrometer = spectrometer
+        self.lamp = lamp

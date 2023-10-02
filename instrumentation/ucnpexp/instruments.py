@@ -198,17 +198,24 @@ class GPIO_helper:
     def read(self):
         return self.state
 
-class Spectrometer(abstract.Spectrometer):
-
-    def __init__(self, motor: abstract.Motor, osc: OscilloscopeChannel):
-        # Como puedo hacer que estas cosas sean una property?
+class Monochromator:
+    def __init__(self, motor: abstract.Motor):
         self.CALIB_ATTRS = [ '_wl_step_ratio',
                     '_greater_wl_cw',
                     '_max_wl',
                     '_min_wl',
                     '_wavelength']
         self._motor = motor
-        self._osc = osc
+
+    @classmethod
+    def constructor_default(cls, conn, pin_step, pin_direction, MOTOR_DRIVER=A4988, MOTOR=M061CS02):
+        ttls = {
+                'pin_step'  :   conn.root.create_RPTTL('pin_step', (False, 'p', pin_step)),
+                'direction' :   conn.root.create_RPTTL('direction', (True, 'p', pin_direction)),
+                }
+        driver = MOTOR_DRIVER(ttls)
+        motor = MOTOR(driver)
+        return cls(motor)
 
     @property
     def wavelength(self):
@@ -230,19 +237,6 @@ class Spectrometer(abstract.Spectrometer):
     def wl_step_ratio(self):
         return self._wl_step_ratio
 
-    @classmethod
-    def constructor_default(cls, conn, MOTOR_DRIVER=A4988, MOTOR=M061CS02,
-                             OSCILLOSCOPE_CHANNEL=OscilloscopeChannel):
-        ttls = {
-                'pin_step'  :   conn.root.create_RPTTL('pin_step', (False, 'n', 6)),
-                'direction' :   conn.root.create_RPTTL('direction', (True, 'p', 7)),
-                }
-        driver = MOTOR_DRIVER(ttls)
-        motor = MOTOR(driver)
-        osc = OSCILLOSCOPE_CHANNEL(conn, channel=0, voltage_range=20.0,
-                                   decimation=1, trigger_post=None, trigger_pre=0)
-        return cls(motor, osc)
-
     def set_wavelength(self, wavelength: float):
         if self.check_safety(wavelength):
             self._wavelength = wavelength
@@ -250,7 +244,6 @@ class Spectrometer(abstract.Spectrometer):
             print(f"Wavelength must be between {self._min_wl} and {self._max_wl}")
 
     def check_safety(self, wavelength):
-        # este check no parece muy bueno. Pensar cómo mejorarlo
         return self._min_wl <= wavelength <= self._max_wl
 
     def goto_wavelength(self, wavelength: float):
@@ -270,16 +263,29 @@ class Spectrometer(abstract.Spectrometer):
             self._calibration = yaml.safe_load(f)
         for param in self._calibration:
             setattr(self, f"_{param}", self._calibration[param])
-            # Esto hace que la property se agregue a la clase, y no a la
-            # instancia (diferencia entre self y self.__class__). Creo que
-            # En este caso no importa, pero es algo a tener en cuenta
-            #setattr(self.__class__, param,
-            #        property(fget=lambda self: getattr(self, f"_{param}")))
 
     def calibrate(self):
         ui.SpectrometerCalibrationInterface(self).cmdloop()
         # Esto no se hace pero por ahora lo resuelvo así. Cambiar
         self.load_calibration(self.calibration_path)
+
+class Spectrometer(abstract.Spectrometer):
+
+    def __init__(self, monochromator: Monochromator, osc: OscilloscopeChannel):
+        self.monochromator = monochromator
+        self._osc = osc
+
+    @classmethod
+    def constructor_default(cls, conn, MONOCHROMATOR: Monochromator,
+                             OSCILLOSCOPE_CHANNEL: OscilloscopeChannel):
+        monochromator = Monochromator.constructor_default(conn, pin_step=6, direction=7)
+        osc = OSCILLOSCOPE_CHANNEL(conn, channel=0, voltage_range=20.0,
+                                   decimation=1, trigger_post=None, trigger_pre=0)
+        return cls(monochromator, osc)
+
+    # Esto se hace o directamente dejo el self.monochromator.goto_wavelength?
+    def goto_wavelength(self, wavelength):
+        return self.monochromator.goto_wavelength(wavelength)
 
     def get_spectrum(self,
                      integration_time: float,
@@ -289,7 +295,7 @@ class Spectrometer(abstract.Spectrometer):
                      rounds: int = 1
                      ):
         if starting_wavelength is None:
-            starting_wavelength = self.min_wl
+            starting_wavelength = self.monochromator.min_wl
         if ending_wavelength is None:
             ending_wavelength = self.max_wl
         if wavelength_step is None:

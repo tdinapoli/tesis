@@ -208,7 +208,8 @@ class Monochromator:
         self._motor = motor
 
     @classmethod
-    def constructor_default(cls, conn, pin_step, pin_direction, MOTOR_DRIVER=A4988, MOTOR=M061CS02):
+    def constructor_default(cls, conn, pin_step, pin_direction, MOTOR_DRIVER=A4988,
+                             MOTOR=M061CS02):
         ttls = {
                 'pin_step'  :   conn.root.create_RPTTL('pin_step', (False, 'p', pin_step)),
                 'direction' :   conn.root.create_RPTTL('direction', (True, 'p', pin_direction)),
@@ -276,9 +277,9 @@ class Spectrometer(abstract.Spectrometer):
         self._osc = osc
 
     @classmethod
-    def constructor_default(cls, conn, MONOCHROMATOR: Monochromator,
-                             OSCILLOSCOPE_CHANNEL: OscilloscopeChannel):
-        monochromator = Monochromator.constructor_default(conn, pin_step=6, direction=7)
+    def constructor_default(cls, conn, MONOCHROMATOR=Monochromator,
+                             OSCILLOSCOPE_CHANNEL=OscilloscopeChannel):
+        monochromator = MONOCHROMATOR.constructor_default(conn, pin_step=6, direction=7)
         osc = OSCILLOSCOPE_CHANNEL(conn, channel=0, voltage_range=20.0,
                                    decimation=1, trigger_post=None, trigger_pre=0)
         return cls(monochromator, osc)
@@ -330,3 +331,9 @@ class QuantaMaster810:
     def __init__(self, spectrometer: Spectrometer, lamp: Monochromator) -> None:
         self.spectrometer = spectrometer
         self.lamp = lamp
+
+    @classmethod
+    def constructor_default(cls, conn):
+        lamp = Monochromator.constructor_default(conn, pin_step=5, pin_direction=4)
+        spectrometer = Spectrometer.constructor_default(conn)
+        return cls(spectrometer=spectrometer, lamp=lamp)

@@ -252,11 +252,11 @@ class Monochromator:
             steps = abs(int((wavelength - self.wavelength)/self._wl_step_ratio))
             cw = (wavelength - self.wavelength) > 0
             cw = not (cw ^ self.greater_wl_cw)
-            print(cw)
             self._motor.rotate_step(steps, cw)
             self._wavelength = wavelength
         else:
             print(f"Wavelength must be between {self._min_wl} and {self._max_wl}")
+        return self._wavelength
 
 
     def load_calibration(self, path): #wavelength
@@ -269,6 +269,23 @@ class Monochromator:
         ui.SpectrometerCalibrationInterface(self).cmdloop()
         # Esto no se hace pero por ahora lo resuelvo así. Cambiar
         self.load_calibration(self.calibration_path)
+
+    def swipe_wavelengths(self,
+                          starting_wavelength: float=None,
+                          ending_wavelength: float=None,
+                          wavelength_step: float=None,
+                          ):
+        if starting_wavelength is None:
+            starting_wavelength = self.monochromator.min_wl
+        if ending_wavelength is None:
+            ending_wavelength = self.max_wl
+        if wavelength_step is None:
+            wavelength_step = self.wl_step_ratio
+
+        n_measurements = int((ending_wavelength - starting_wavelength)/wavelength_step)
+        for i in range(n_measurements):
+            yield self.goto_wavelength(starting_wavelength + i * wavelength_step)
+        
 
 class Spectrometer(abstract.Spectrometer):
 
@@ -295,17 +312,13 @@ class Spectrometer(abstract.Spectrometer):
                      wavelength_step: float = None,
                      rounds: int = 1
                      ):
-        if starting_wavelength is None:
-            starting_wavelength = self.monochromator.min_wl
-        if ending_wavelength is None:
-            ending_wavelength = self.max_wl
-        if wavelength_step is None:
-            wavelength_step = self.wl_step_ratio
         n_measurements = int((ending_wavelength - starting_wavelength)/wavelength_step)
         intensity_accum = np.zeros(n_measurements, dtype=float)
         intensity_squared_accum = np.zeros(n_measurements, dtype=float)
-        for i in range(n_measurements):
-            self.goto_wavelength(starting_wavelength + i * wavelength_step)
+        for i, wl in enumerate(self.monochromator.swipe_wavelengths(
+            starting_wavelength=starting_wavelength,
+            ending_wavelength=ending_wavelength,
+            wavelength_step=wavelength_step)):
             intensity_accum[i], intensity_squared_accum[i], n_datapoints = self.get_intensity(integration_time, rounds)
         return intensity_accum, intensity_squared_accum, n_datapoints
 

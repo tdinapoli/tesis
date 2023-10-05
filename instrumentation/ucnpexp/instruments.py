@@ -350,3 +350,34 @@ class QuantaMaster810:
         lamp = Monochromator.constructor_default(conn, pin_step=5, pin_direction=4)
         spectrometer = Spectrometer.constructor_default(conn)
         return cls(spectrometer=spectrometer, lamp=lamp)
+
+    def get_emission(self,
+                     integration_time: float,
+                     starting_wavelength: float = None,
+                     ending_wavelength: float = None,
+                     wavelength_step: float = None,
+                     rounds: int = 1
+                     ):
+        return self.spectrometer.get_spectrum(
+                     integration_time: float,
+                     starting_wavelength: float = None,
+                     ending_wavelength: float = None,
+                     wavelength_step: float = None,
+                     rounds: int = 1)
+    
+    def get_excitation(self,
+                     integration_time: float,
+                     starting_wavelength: float = None,
+                     ending_wavelength: float = None,
+                     wavelength_step: float = None,
+                     rounds: int = 1
+                     ):
+        n_measurements = int((ending_wavelength - starting_wavelength)/wavelength_step)
+        intensity_accum = np.zeros(n_measurements, dtype=float)
+        intensity_squared_accum = np.zeros(n_measurements, dtype=float)
+        for i, wl in enumerate(self.lamp.swipe_wavelengths(
+            starting_wavelength=starting_wavelength,
+            ending_wavelength=ending_wavelength,
+            wavelength_step=wavelength_step)):
+            intensity_accum[i], intensity_squared_accum[i], n_datapoints = self.get_intensity(integration_time, rounds)
+        return intensity_accum, intensity_squared_accum, n_datapoints

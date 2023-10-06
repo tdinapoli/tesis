@@ -211,6 +211,11 @@ class Monochromator:
     def constructor_default(cls, conn, pin_step, pin_direction, MOTOR_DRIVER=A4988,
                              MOTOR=M061CS02):
         ttls = {
+                'notenable' :   conn.root.create_RPTTL('notenable', (False, 'n', 0)),
+                'ms1'       :   conn.root.create_RPTTL('ms1', (False, 'n', 1)),
+                'ms2'       :   conn.root.create_RPTTL('ms2', (False, 'n', 2)),
+                'ms3'       :   conn.root.create_RPTTL('ms3', (False, 'n', 3)),
+                'notreset'  :   conn.root.create_RPTTL('notreset', (True, 'n', 4)),
                 'pin_step'  :   conn.root.create_RPTTL('pin_step', (False, 'p', pin_step)),
                 'direction' :   conn.root.create_RPTTL('direction', (True, 'p', pin_direction)),
                 }
@@ -220,7 +225,10 @@ class Monochromator:
 
     @property
     def wavelength(self):
-        return self._wavelength
+        try:
+            return self._wavelength
+        except:
+            return None
 
     @property
     def min_wl(self):
@@ -289,23 +297,38 @@ class Monochromator:
 
 class Spectrometer(abstract.Spectrometer):
 
-    def __init__(self, monochromator: Monochromator, osc: OscilloscopeChannel):
+    def __init__(self, monochromator: Monochromator,
+                  osc: OscilloscopeChannel,
+                  lamp: Monochromator):
         self.monochromator = monochromator
         self._osc = osc
+        self.lamp = lamp
 
     @classmethod
     def constructor_default(cls, conn, MONOCHROMATOR=Monochromator,
                              OSCILLOSCOPE_CHANNEL=OscilloscopeChannel):
-        monochromator = MONOCHROMATOR.constructor_default(conn, pin_step=6, direction=7)
+        monochromator = MONOCHROMATOR.constructor_default(conn, pin_step=6, pin_direction=7)
         osc = OSCILLOSCOPE_CHANNEL(conn, channel=0, voltage_range=20.0,
                                    decimation=1, trigger_post=None, trigger_pre=0)
-        return cls(monochromator, osc)
+        lamp = MONOCHROMATOR.constructor_default(conn, pin_step=4, pin_direction=5)
+        return cls(monochromator, osc, lamp)
 
     # Esto se hace o directamente dejo el self.monochromator.goto_wavelength?
     def goto_wavelength(self, wavelength):
         return self.monochromator.goto_wavelength(wavelength)
 
+    def get_emission(self, integration_time: float, **kwargs):
+        return self.get_spectrum(monochromator=self.monochromator,
+                                 integration_time=integration_time,
+                                 **kwargs)
+
+    def get_excitation(self, integration_time: float, **kwargs):
+        return self.get_spectrum(monochromator=self.lamp,
+                                 integration_time=integration_time,
+                                 **kwargs)
+
     def get_spectrum(self,
+                     monochromator: Monochromator,
                      integration_time: float,
                      starting_wavelength: float = None,
                      ending_wavelength: float = None,
@@ -315,7 +338,7 @@ class Spectrometer(abstract.Spectrometer):
         n_measurements = int((ending_wavelength - starting_wavelength)/wavelength_step)
         intensity_accum = np.zeros(n_measurements, dtype=float)
         intensity_squared_accum = np.zeros(n_measurements, dtype=float)
-        for i, wl in enumerate(self.monochromator.swipe_wavelengths(
+        for i, wl in enumerate(monochromator.swipe_wavelengths(
             starting_wavelength=starting_wavelength,
             ending_wavelength=ending_wavelength,
             wavelength_step=wavelength_step)):
@@ -340,44 +363,5 @@ class Spectrometer(abstract.Spectrometer):
         self._osc.set_measurement_time(seconds)
         return self._osc.measure()
 
-class QuantaMaster810:
-    def __init__(self, spectrometer: Spectrometer, lamp: Monochromator) -> None:
-        self.spectrometer = spectrometer
-        self.lamp = lamp
-
-    @classmethod
-    def constructor_default(cls, conn):
-        lamp = Monochromator.constructor_default(conn, pin_step=5, pin_direction=4)
-        spectrometer = Spectrometer.constructor_default(conn)
-        return cls(spectrometer=spectrometer, lamp=lamp)
-
-    def get_emission(self,
-                     integration_time: float,
-                     starting_wavelength: float = None,
-                     ending_wavelength: float = None,
-                     wavelength_step: float = None,
-                     rounds: int = 1
-                     ):
-        return self.spectrometer.get_spectrum(
-                     integration_time: float,
-                     starting_wavelength: float = None,
-                     ending_wavelength: float = None,
-                     wavelength_step: float = None,
-                     rounds: int = 1)
-    
-    def get_excitation(self,
-                     integration_time: float,
-                     starting_wavelength: float = None,
-                     ending_wavelength: float = None,
-                     wavelength_step: float = None,
-                     rounds: int = 1
-                     ):
-        n_measurements = int((ending_wavelength - starting_wavelength)/wavelength_step)
-        intensity_accum = np.zeros(n_measurements, dtype=float)
-        intensity_squared_accum = np.zeros(n_measurements, dtype=float)
-        for i, wl in enumerate(self.lamp.swipe_wavelengths(
-            starting_wavelength=starting_wavelength,
-            ending_wavelength=ending_wavelength,
-            wavelength_step=wavelength_step)):
-            intensity_accum[i], intensity_squared_accum[i], n_datapoints = self.get_intensity(integration_time, rounds)
-        return intensity_accum, intensity_squared_accum, n_datapoints
+    def set_wavelength(self, wavelength: float):
+        return self.monochromator.set_wavelength(wavelength)

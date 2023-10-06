@@ -316,6 +316,9 @@ class Spectrometer(abstract.Spectrometer):
     # Esto se hace o directamente dejo el self.monochromator.goto_wavelength?
     def goto_wavelength(self, wavelength):
         return self.monochromator.goto_wavelength(wavelength)
+    
+    def goto_excitation_wavelength(self, wavelength):
+        return self.lamp.goto_wavelength(wavelength)
 
     def get_emission(self, integration_time: float, **kwargs):
         return self.get_spectrum(monochromator=self.monochromator,
@@ -365,3 +368,6 @@ class Spectrometer(abstract.Spectrometer):
 
     def set_wavelength(self, wavelength: float):
         return self.monochromator.set_wavelength(wavelength)
+
+    def set_excitation_wavelength(self, wavelength: float):
+        return self.lamp.set_wavelength(wavelength)

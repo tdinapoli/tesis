@@ -339,14 +339,16 @@ class Spectrometer(abstract.Spectrometer):
                      rounds: int = 1
                      ):
         n_measurements = int((ending_wavelength - starting_wavelength)/wavelength_step)
-        intensity_accum = np.zeros(n_measurements, dtype=float)
-        intensity_squared_accum = np.zeros(n_measurements, dtype=float)
+        osc_screens = np.repeat(np.zeros(n_measurements, dtype=float),
+                                     n_measurements)
+        times = np.repeat(np.zeros(n_measurements, dtype=float),
+                                     n_measurements)
         for i, wl in enumerate(monochromator.swipe_wavelengths(
             starting_wavelength=starting_wavelength,
             ending_wavelength=ending_wavelength,
             wavelength_step=wavelength_step)):
-            intensity_accum[i], intensity_squared_accum[i], n_datapoints = self.get_intensity(integration_time, rounds)
-        return intensity_accum, intensity_squared_accum, n_datapoints
+            osc_screens[i], times[i], n_datapoints = self.get_intensity(integration_time, rounds)
+        return osc_screens, times, n_datapoints
 
     def get_intensity(self, seconds, rounds: int = 1):
         intensity_accum = 0
@@ -354,12 +356,14 @@ class Spectrometer(abstract.Spectrometer):
         # Este loop sería ideal que esté lo más cerca de la RP posible
         # el problema es que igual no podemos medir de forma continua ahora
         # así que da igual un delay de 10ms con uno de 100ms. 
+        times = np.linspace(0, seconds,
+                self._osc.amount_datapoints * self._osc.sampling_rate)
         for _ in range(rounds):
             data = self.integrate(seconds)
-            intensity_accum += np.sum(data)
-            intensity_squared_accum += np.sum(data*data)
+            #intensity_accum += np.sum(data)
+            #intensity_squared_accum += np.sum(data*data)
         n_datapoints = rounds * self._osc.amount_datapoints
-        return intensity_accum, intensity_squared_accum, n_datapoints
+        return data, times, n_datapoints
 
     # Debería setear la escala vertical? ver en la rp
     def integrate(self, seconds):

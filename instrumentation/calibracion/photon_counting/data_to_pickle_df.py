@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 # Directory where the .npy files are located
-directory = "/home/tdinapoli/Documents/personales/facultad/tesis/git/data/rodamina/med1"
+directory = "/home/tomi/Documents/facultad/tesis/git/data/oscuridad_total"
 
 # Get a list of all .npy files in the directory
 npy_files = [f for f in os.listdir(directory) if f.endswith(".npy")]

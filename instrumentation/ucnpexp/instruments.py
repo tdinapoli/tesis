@@ -339,15 +339,15 @@ class Spectrometer(abstract.Spectrometer):
                      rounds: int = 1
                      ):
         n_measurements = int((ending_wavelength - starting_wavelength)/wavelength_step)
-        osc_screens = np.repeat(np.zeros(n_measurements, dtype=float),
-                                     n_measurements)
-        times = np.repeat(np.zeros(n_measurements, dtype=float),
-                                     n_measurements)
+        osc_screens = []
+        times = []
         for i, wl in enumerate(monochromator.swipe_wavelengths(
             starting_wavelength=starting_wavelength,
             ending_wavelength=ending_wavelength,
             wavelength_step=wavelength_step)):
-            osc_screens[i], times[i], n_datapoints = self.get_intensity(integration_time, rounds)
+            data, time, n_datapoints = self.get_intensity(integration_time, rounds)
+            osc_screens.append(data)
+            times.append(time)
         return osc_screens, times, n_datapoints
 
     def get_intensity(self, seconds, rounds: int = 1):

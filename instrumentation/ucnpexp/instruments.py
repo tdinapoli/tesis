@@ -199,16 +199,20 @@ class GPIO_helper:
         return self.state
 
 class Monochromator:
-    def __init__(self, motor: abstract.Motor):
+    def __init__(self, motor: abstract.Motor, limit_switch: RPTTL = None,
+                 homed_wavelength = None):
+                 # A esto por ahora lo pongo así, pero debería implementarlo
+                 # en la calibraición mejor
         self.CALIB_ATTRS = [ '_wl_step_ratio',
                     '_greater_wl_cw',
                     '_max_wl',
                     '_min_wl',
                     '_wavelength']
         self._motor = motor
+        self._limit_switch = limit_switch
 
     @classmethod
-    def constructor_default(cls, conn, pin_step, pin_direction, MOTOR_DRIVER=A4988,
+    def constructor_default(cls, conn, pin_step, pin_direction, limit_switch, MOTOR_DRIVER=A4988,
                              MOTOR=M061CS02):
         ttls = {
                 'notenable' :   conn.root.create_RPTTL('notenable', (False, 'n', 0)),
@@ -221,7 +225,8 @@ class Monochromator:
                 }
         driver = MOTOR_DRIVER(ttls)
         motor = MOTOR(driver)
-        return cls(motor)
+        limit_switch = conn.root.create_RPDI('limit_switch', ("p", limit_switch)) 
+        return cls(motor, limit_switch=limit_switch)
 
     @property
     def wavelength(self):
@@ -266,6 +271,10 @@ class Monochromator:
             print(f"Wavelength must be between {self._min_wl} and {self._max_wl}")
         return self._wavelength
 
+    @property
+    def limit_switch(self):
+        return self._limit_switch
+
 
     def load_calibration(self, path): #wavelength
         with open(path, 'r') as f:
@@ -293,6 +302,12 @@ class Monochromator:
         n_measurements = int((ending_wavelength - starting_wavelength)/wavelength_step)
         for i in range(n_measurements):
             yield self.goto_wavelength(starting_wavelength + i * wavelength_step)
+
+    def home_wavelength(self, set_wavelength=True):
+        while self.limit_switch.state and self.check_safety(self.wavelength):
+            self.goto_wavelength(self.wavelength - abs(self._wl_step_ratio))
+        if set_wavelength and self.home_wavelength:
+            self.set_wavelength(self.home_wavelength)
         
 
 class Spectrometer(abstract.Spectrometer):
@@ -307,10 +322,12 @@ class Spectrometer(abstract.Spectrometer):
     @classmethod
     def constructor_default(cls, conn, MONOCHROMATOR=Monochromator,
                              OSCILLOSCOPE_CHANNEL=OscilloscopeChannel):
-        monochromator = MONOCHROMATOR.constructor_default(conn, pin_step=6, pin_direction=7)
+        monochromator = MONOCHROMATOR.constructor_default(conn,
+                        pin_step=4, pin_direction=5, limit_switch=3)
         osc = OSCILLOSCOPE_CHANNEL(conn, channel=0, voltage_range=20.0,
-                                   decimation=1, trigger_post=None, trigger_pre=0)
-        lamp = MONOCHROMATOR.constructor_default(conn, pin_step=4, pin_direction=5)
+                        decimation=1, trigger_post=None, trigger_pre=0)
+        lamp = MONOCHROMATOR.constructor_default(conn,
+                        pin_step=6, pin_direction=7, limit_switch=2)
         return cls(monochromator, osc, lamp)
 
     # Esto se hace o directamente dejo el self.monochromator.goto_wavelength?
@@ -356,8 +373,7 @@ class Spectrometer(abstract.Spectrometer):
         # Este loop sería ideal que esté lo más cerca de la RP posible
         # el problema es que igual no podemos medir de forma continua ahora
         # así que da igual un delay de 10ms con uno de 100ms. 
-        times = np.linspace(0, seconds,
-                self._osc.amount_datapoints * self._osc.sampling_rate)
+        times = np.linspace(0, seconds, self._osc.amount_datapoints)
         for _ in range(rounds):
             data = self.integrate(seconds)
             #intensity_accum += np.sum(data)

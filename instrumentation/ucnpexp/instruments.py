@@ -308,8 +308,10 @@ class Monochromator:
             yield self.goto_wavelength(starting_wavelength + i * wavelength_step)
 
     def home_wavelength(self, set_wavelength=True):
-        while self.limit_switch.state and self.check_safety(self.wavelength):
-            self.goto_wavelength(self.wavelength - abs(self._wl_step_ratio))
+        # Tengo que poner un check de safety tipo "que no haga más de N pasos si nunca llegó al límite"
+        # así nunca se pasa de rosca el mnocromador. no puedo poner el check safety porque quizás wavelength no está definido
+        while self.limit_switch.state:
+            self.rotate_step(1, not self._greater_wl_cw)
         if set_wavelength and self.home_wavelength:
             self.set_wavelength(self.home_wavelength)
         

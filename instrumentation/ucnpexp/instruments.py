@@ -3,6 +3,8 @@ import yaml
 import rpyc
 from . import user_interface as ui
 import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 
 class OscilloscopeChannel:
     def __init__(self, conn, *, channel= 0, voltage_range=20.0,
@@ -316,10 +318,16 @@ class Spectrometer(abstract.Spectrometer):
 
     def __init__(self, monochromator: Monochromator,
                   osc: OscilloscopeChannel,
-                  lamp: Monochromator):
+                  lamp: Monochromator,
+                  monochromator_calibration_path = None,
+                  lamp_calibration_path = None):
         self.monochromator = monochromator
         self._osc = osc
         self.lamp = lamp
+        if monochromator_calibration_path:
+            self.monochromator.load_calibration(monochromator_calibration_path)
+        if lamp_calibration_path:
+            self.lamp.load_calibration(lamp_calibration_path)
 
     @classmethod
     def constructor_default(cls, conn, MONOCHROMATOR=Monochromator,
@@ -330,7 +338,12 @@ class Spectrometer(abstract.Spectrometer):
                         decimation=1, trigger_post=None, trigger_pre=0)
         lamp = MONOCHROMATOR.constructor_default(conn,
                         pin_step=6, pin_direction=7, limit_switch=2)
-        return cls(monochromator, osc, lamp)
+        common_path = '/home/tomi/Documents/facultad/tesis/git'
+        lamp_calibration_path = f'{common_path}/excitation_calibration.yaml'
+        monochromator_calibration_path = f'{common_path}/emission_calibration.yaml'
+        return cls(monochromator, osc, lamp,
+                   lamp_calibration_path=lamp_calibration_path,
+                   monochromator_calibration_path=monochromator_calibration_path)
 
     # Esto se hace o directamente dejo el self.monochromator.goto_wavelength?
     def goto_wavelength(self, wavelength):

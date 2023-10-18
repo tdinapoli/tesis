@@ -1,0 +1,12 @@
+[Unit]
+Description=Horiba Quantamaster PTI Server Red Pitaya 
+After=network.target
+
+[Service]
+ExecStart=/root/rp-server/rp-server.sh
+WorkingDirectory=/root/rp-server
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target

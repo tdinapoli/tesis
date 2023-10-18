@@ -27,6 +27,18 @@ class RPTTL:
     def __str__(self):
         return str(self.state)
 
+class RPDI:
+    def __init__(self, pin, gpio):
+        col, num = pin
+        self._gpio = gpio(col, num, 'in')
+
+    @property
+    def exposed_state(self):
+        return self._gpio.read()
+
+    def __str__(self):
+        return str(self.state)
+
 class OscilloscopeChannel:
     def __init__(self, osc, channel, voltage_range, decimation=1,
                   trigger_post=None, trigger_pre=0):
@@ -110,6 +122,11 @@ class RPManager(rpyc.Service):
         ttl = RPTTL(state, pin, self.gpio)
         setattr(self, "exposed_{name}".format(name=name), ttl)
         return ttl
+
+    def exposed_create_RPDI(self, name, pin):
+        di = RPDI(pin, self.gpio)
+        setattr(self, "exposed_{name}".format(name=name), di)
+        return di
 
     def exposed_create_osc_channel(self, *, channel, voltage_range, decimation=1,
                                    trigger_post=None, trigger_pre=0):

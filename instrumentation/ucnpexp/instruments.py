@@ -207,6 +207,8 @@ class Monochromator:
                     '_greater_wl_cw',
                     '_max_wl',
                     '_min_wl',
+                    '_homed_lamp_wavelength',
+                    '_homed_monochromator_wavelength',
                     '_wavelength']
         self._motor = motor
         self._limit_switch = limit_switch
@@ -384,10 +386,22 @@ class Spectrometer(abstract.Spectrometer):
     # Debería setear la escala vertical? ver en la rp
     def integrate(self, seconds):
         self._osc.set_measurement_time(seconds)
-        return self._osc.measure()
+        osc_screen = self._osc.measure()
+        return self._count_photons(osc_screen)
+    
+    # Esto tiene que contar fotones cuando lo calibre bien
+    def count_photons(self, osc_screen):
+        return osc_screen
 
     def set_wavelength(self, wavelength: float):
         return self.monochromator.set_wavelength(wavelength)
 
     def set_excitation_wavelength(self, wavelength: float):
         return self.lamp.set_wavelength(wavelength)
+
+    def home(self):
+        self.lamp.home_wavelength()
+        self.monochromator.home_wavelength()
+        print(f"Lamp wavelength should be {self._homed_lamp_wavelength}")
+        print(f"Monochromator wavelength should be {self._homed_monochromator_wavelength}")
+        print(f"If they are wrong, set them with spec.lamp.set_wavelength() and spec.monochromator.set_wavelength()")

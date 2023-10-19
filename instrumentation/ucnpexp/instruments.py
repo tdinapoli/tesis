@@ -369,19 +369,35 @@ class Spectrometer(abstract.Spectrometer):
     def goto_excitation_wavelength(self, wavelength):
         return self.lamp.goto_wavelength(wavelength)
 
-    def get_emission(self, integration_time: float, excitation_wavelength: float = None, **kwargs):
+    def get_emission(self, integration_time: float, excitation_wavelength: float = None,
+                     iterator: bool = False, **kwargs):
         if excitation_wavelength:
             self.lamp.goto_wavelength(excitation_wavelength)
-        return self._get_spectrum(monochromator=self.monochromator,
-                                 integration_time=integration_time,
-                                 **kwargs)
+        spectrum_iterator  = self._get_spectrum(monochromator=self.monochromator,
+                                                integration_time=integration_time,
+                                                **kwargs)
+        if iterator:
+            return spectrum_iterator
+        else:
+            last_df = None
+            for df in spectrum_iterator:
+                last_df = df
+            return last_df
 
-    def get_excitation(self, integration_time: float, emission_wavelength: float = None,**kwargs):
+    def get_excitation(self, integration_time: float, emission_wavelength: float = None,
+                       iterator: bool = False, **kwargs):
         if emission_wavelength:
             self.monochromator.goto_wavelength(emission_wavelength)
-        return self._get_spectrum(monochromator=self.lamp,
-                                 integration_time=integration_time,
-                                 **kwargs)
+        spectrum_iterator  = self._get_spectrum(monochromator=self.lamp,
+                                                integration_time=integration_time,
+                                                **kwargs)
+        if iterator:
+            return spectrum_iterator
+        else:
+            last_df = None
+            for df in spectrum_iterator:
+                last_df = df
+            return last_df
 
     def _get_spectrum(self,
                      monochromator: Monochromator,
@@ -405,7 +421,7 @@ class Spectrometer(abstract.Spectrometer):
             data.at[i, "wavelength"] = wl
             data.at[i, "counts"] = photons
             data.at[i, "integration time"] = time_measured
-        return data
+            yield data
 
     def get_intensity(self, seconds, rounds: int = 1):
         intensity_accum = 0

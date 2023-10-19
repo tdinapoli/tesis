@@ -370,16 +370,16 @@ class Spectrometer(abstract.Spectrometer):
         return self.lamp.goto_wavelength(wavelength)
 
     def get_emission(self, integration_time: float, **kwargs):
-        return self.get_spectrum(monochromator=self.monochromator,
+        return self._get_spectrum(monochromator=self.monochromator,
                                  integration_time=integration_time,
                                  **kwargs)
 
     def get_excitation(self, integration_time: float, **kwargs):
-        return self.get_spectrum(monochromator=self.lamp,
+        return self._get_spectrum(monochromator=self.lamp,
                                  integration_time=integration_time,
                                  **kwargs)
 
-    def get_spectrum(self,
+    def _get_spectrum(self,
                      monochromator: Monochromator,
                      integration_time: float,
                      starting_wavelength: float = None,

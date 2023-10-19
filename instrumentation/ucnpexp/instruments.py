@@ -310,8 +310,10 @@ class Monochromator:
     def home_wavelength(self, set_wavelength=True):
         # Tengo que poner un check de safety tipo "que no haga más de N pasos si nunca llegó al límite"
         # así nunca se pasa de rosca el mnocromador. no puedo poner el check safety porque quizás wavelength no está definido
-        while self.limit_switch.state:
+        steps_done = 0
+        while self.limit_switch.state and steps_done < 2*self.min_wl/self.wl_step_ratio:
             self._motor.rotate_step(1, not self._greater_wl_cw)
+            steps_done += 1
         if set_wavelength and self.home_wavelength:
             self.set_wavelength(self.home_wavelength)
         

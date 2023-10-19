@@ -5,6 +5,7 @@ from . import user_interface as ui
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import scipy as sp
 
 class OscilloscopeChannel:
     def __init__(self, conn, *, channel= 0, voltage_range=20.0,
@@ -418,8 +419,11 @@ class Spectrometer(abstract.Spectrometer):
         return self._count_photons(osc_screen)
     
     # Esto tiene que contar fotones cuando lo calibre bien
-    def count_photons(self, osc_screen):
-        return osc_screen
+    def _count_photons(self, osc_screen):
+        # La altura hay que calibrarla
+        times, heights = sp.signal.find_peaks(osc_screen, height=(0.16, 1))
+        return len(times)
+        # return osc_screen
 
     def set_wavelength(self, wavelength: float):
         return self.monochromator.set_wavelength(wavelength)

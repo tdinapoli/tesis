@@ -394,7 +394,7 @@ class Spectrometer(abstract.Spectrometer):
             starting_wavelength=starting_wavelength,
             ending_wavelength=ending_wavelength,
             wavelength_step=wavelength_step)):
-            data, time, n_datapoints = self.get_intensity(integration_time, rounds)
+            photons, time_measured = self.get_intensity(integration_time, rounds)
             osc_screens.append(data)
             times.append(time)
         return osc_screens, times, n_datapoints
@@ -405,13 +405,14 @@ class Spectrometer(abstract.Spectrometer):
         # Este loop sería ideal que esté lo más cerca de la RP posible
         # el problema es que igual no podemos medir de forma continua ahora
         # así que da igual un delay de 10ms con uno de 100ms. 
-        times = np.linspace(0, seconds, self._osc.amount_datapoints)
+        #times = np.linspace(0, seconds, self._osc.amount_datapoints)
+        photons = 0
         for _ in range(rounds):
-            data = self.integrate(seconds)
+            photons += self.integrate(seconds)
             #intensity_accum += np.sum(data)
             #intensity_squared_accum += np.sum(data*data)
-        n_datapoints = rounds * self._osc.amount_datapoints
-        return data, times, n_datapoints
+        time_measured = rounds * self._osc.amount_datapoints/self._osc.sampling_rate
+        return photons, time_measured
 
     # Debería setear la escala vertical? ver en la rp
     def integrate(self, seconds):

@@ -201,17 +201,14 @@ class GPIO_helper:
         return self.state
 
 class Monochromator:
-    def __init__(self, motor: abstract.Motor, limit_switch: RPTTL = None,
-                 homed_wavelength = None):
+    def __init__(self, motor: abstract.Motor, limit_switch: RPTTL = None):
                  # A esto por ahora lo pongo así, pero debería implementarlo
                  # en la calibraición mejor
         self.CALIB_ATTRS = [ '_wl_step_ratio',
                     '_greater_wl_cw',
                     '_max_wl',
                     '_min_wl',
-                    '_homed_lamp_wavelength',
-                    '_homed_monochromator_wavelength',
-                    '_wavelength']
+                    '_home_wavelength']
         self._motor = motor
         self._limit_switch = limit_switch
 
@@ -255,6 +252,10 @@ class Monochromator:
     def wl_step_ratio(self):
         return self._wl_step_ratio
 
+    @property
+    def home_wavelength(self):
+        return self._home_wavelength
+
     def set_wavelength(self, wavelength: float):
         if self.check_safety(wavelength):
             self._wavelength = wavelength
@@ -279,12 +280,18 @@ class Monochromator:
     def limit_switch(self):
         return self._limit_switch
 
-
     def load_calibration(self, path): #wavelength
         with open(path, 'r') as f:
             self._calibration = yaml.safe_load(f)
         for param in self._calibration:
             setattr(self, f"_{param}", self._calibration[param])
+        calibration_complete = True
+        for param in self.CALIB_ATTRS:
+            if not hasattr(self, param):
+                calibration_complete = False
+                print(f"Calibration parameter {param[1:]} is missing.")
+        if not calibration_complete:
+            print("Calibration is incomplete.")
 
     def calibrate(self):
         ui.SpectrometerCalibrationInterface(self).cmdloop()
@@ -307,15 +314,19 @@ class Monochromator:
         for i in range(n_measurements):
             yield self.goto_wavelength(starting_wavelength + i * wavelength_step)
 
-    def home_wavelength(self, set_wavelength=True):
+    def home(self, set_wavelength=True):
         # Tengo que poner un check de safety tipo "que no haga más de N pasos si nunca llegó al límite"
         # así nunca se pasa de rosca el mnocromador. no puedo poner el check safety porque quizás wavelength no está definido
         steps_done = 0
-        while self.limit_switch.state and steps_done < 2*self.min_wl/self.wl_step_ratio:
+        steps_limit = self.home_wavelength/self.wl_step_ratio
+        while self.limit_switch.state and steps_done < steps_limit:
             self._motor.rotate_step(1, not self._greater_wl_cw)
             steps_done += 1
-        if set_wavelength and self.home_wavelength:
+        if set_wavelength and steps_done < steps_limit:
             self.set_wavelength(self.home_wavelength)
+        elif steps_done < steps_limit:
+            print("Danger warning:")
+            print(f"Wavelength could not be set. Call home method again if and only if wavelength is greater than {self.home_wavelength}")
         
 
 class Spectrometer(abstract.Spectrometer):
@@ -417,8 +428,8 @@ class Spectrometer(abstract.Spectrometer):
         return self.lamp.set_wavelength(wavelength)
 
     def home(self):
-        self.lamp.home_wavelength()
-        self.monochromator.home_wavelength()
-        print(f"Lamp wavelength should be {self._homed_lamp_wavelength}")
-        print(f"Monochromator wavelength should be {self._homed_monochromator_wavelength}")
+        self.lamp.home()
+        self.monochromator.home()
+        print(f"Lamp wavelength should be {self.lamp.home_wavelength}")
+        print(f"Monochromator wavelength should be {self.monochromator.home_wavelength}")
         print(f"If they are wrong, set them with spec.lamp.set_wavelength() and spec.monochromator.set_wavelength()")

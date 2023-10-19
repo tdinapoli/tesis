@@ -416,7 +416,7 @@ class Spectrometer(abstract.Spectrometer):
     # Debería setear la escala vertical? ver en la rp
     def integrate(self, seconds):
         self._osc.set_measurement_time(seconds)
-        osc_screen = self._osc.measure()
+        osc_screen = np.array(self._osc.measure())
         return self._count_photons(osc_screen)
     
     # Esto tiene que contar fotones cuando lo calibre bien

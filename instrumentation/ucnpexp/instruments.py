@@ -17,7 +17,7 @@ class OscilloscopeChannel:
                                                 trigger_post=trigger_post,
                                                 trigger_pre=trigger_pre)
 
-    def set_measurement_time(self, seconds, offset=0):
+    def set_measurement_time(self, seconds, offset=0, verbose=False):
         # Debería agregarle error o algo si seconds < offset
         decimation_exponent = int(np.ceil(np.log2(
             self._maximum_sampling_rate * seconds / self.buffer_size
@@ -25,12 +25,13 @@ class OscilloscopeChannel:
         self.decimation = decimation_exponent
         self.trigger_pre = offset * self.sampling_rate
         self.trigger_post = (seconds - offset) * self.sampling_rate
-        print(f"Setting decimation exponent to {decimation_exponent}")
-        print(f"The sampling rate is {self._maximum_sampling_rate/self.decimation} Hz")
-        print(f"Setting trigger_pre to {self.trigger_pre}")
-        print(f"Setting trigger_post to {self.trigger_post}")
-        print(f"A total of {self.amount_datapoints} data points will be taken")
-        print(f"Measurement time will be {self.get_measurement_time()}")
+        if verbose:
+            print(f"Setting decimation exponent to {decimation_exponent}")
+            print(f"The sampling rate is {self._maximum_sampling_rate/self.decimation} Hz")
+            print(f"Setting trigger_pre to {self.trigger_pre}")
+            print(f"Setting trigger_post to {self.trigger_post}")
+            print(f"A total of {self.amount_datapoints} data points will be taken")
+            print(f"Measurement time will be {self.get_measurement_time()}")
 
     def get_measurement_time(self):
         return self.amount_datapoints / self.sampling_rate

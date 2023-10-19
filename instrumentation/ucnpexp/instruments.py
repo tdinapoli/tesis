@@ -388,16 +388,20 @@ class Spectrometer(abstract.Spectrometer):
                      rounds: int = 1
                      ):
         n_measurements = int((ending_wavelength - starting_wavelength)/wavelength_step)
-        osc_screens = []
-        times = []
+        data = pd.DataFrame({
+            "wavelength":[0.0]*n_measurements,
+            "counts":[0]*n_measurements,
+            "integration time":[0.0]*n_measurements
+            })
         for i, wl in enumerate(monochromator.swipe_wavelengths(
             starting_wavelength=starting_wavelength,
             ending_wavelength=ending_wavelength,
             wavelength_step=wavelength_step)):
             photons, time_measured = self.get_intensity(integration_time, rounds)
-            osc_screens.append(data)
-            times.append(time)
-        return osc_screens, times, n_datapoints
+            data.at[i, "wavelength"] = wl
+            data.at[i, "counts"] = photons
+            data.at[i, "integration time"] = time_measured
+        return data
 
     def get_intensity(self, seconds, rounds: int = 1):
         intensity_accum = 0

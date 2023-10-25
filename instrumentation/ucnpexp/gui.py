@@ -1,10 +1,11 @@
 from ucnpexp.instruments import Spectrometer
-from ipywidgets import interact_manual, HBox, FloatSlider, FloatRangeSlider, interact, BoundedFloatText, interactive, Layout
+import ipywidgets as widgets
 from IPython.display import HTML, display, clear_output
 import numpy as np
 import matplotlib.pyplot as plt
 from dataclasses import dataclass
 import datetime
+import pandas as pd
 
 class MonochromatorDummy:
     def __init__(self, name):
@@ -45,7 +46,7 @@ class Measurement:
     date: datetime.date
     time: datetime.time
     name: str
-
+    data: pd.DataFrame
 
 class SpectrometerGUI:
     def __init__(self):
@@ -54,6 +55,7 @@ class SpectrometerGUI:
         self.spec = Spectrometer.constructor_default()
         self.spec.lamp.set_wavelength(self.spec.lamp.min_wl)
         self.spec.monochromator.set_wavelength(self.spec.monochromator.min_wl)
+        self.measurements = []
 
     def plot_data(self):
         if self.df is not None:
@@ -68,47 +70,39 @@ class SpectrometerGUI:
         self.ax.set_title("Spectrum")
         self.ax.grid()
 
-    def create_gui(self):
+    def get_excitation(self):
+        starting_wavelength, ending_wavelength = self.wavelength_range.value
+        self.df = self.spec.get_excitation(self.integration_time.value,
+            emission_wavelength=self.counterpart_wavelength.value,
+            starting_wavelength=starting_wavelength,
+            ending_wavelength=ending_wavelength,
+            wavelength_step=self.wavelength_step.value)
 
+    def get_emission(self):
+        starting_wavelength, ending_wavelength = self.wavelength_range.value
+        self.df = self.spec.get_emission(self.integration_time.value,
+            excitation_wavelength=self.counterpart_wavelength.value,
+            starting_wavelength=starting_wavelength,
+            ending_wavelength=ending_wavelength,
+            wavelength_step=self.wavelength_step.value)
 
-        def get_excitation(wavelength_range, integration_time, counterpart_wavelength,
-                wavelength_step):
-            starting_wavelength, ending_wavelength = wavelength_range
-            self.df = self.spec.get_excitation(integration_time,
-                emission_wavelength=counterpart_wavelength,
-                starting_wavelength=starting_wavelength,
-                ending_wavelength=ending_wavelength,
-                wavelength_step=wavelength_step)
-            return self.df
-
-        def get_emission(wavelength_range, integration_time, counterpart_wavelength,
-                         wavelength_step):
-            starting_wavelength, ending_wavelength = wavelength_range
-            self.df = self.spec.get_emission(integration_time,
-                excitation_wavelength=counterpart_wavelength,
-                starting_wavelength=starting_wavelength,
-                ending_wavelength=ending_wavelength,
-                wavelength_step=wavelength_step)
-            return self.df
-
-        def create_spectrum_widgets(type):
+    def create_spectrum_widgets(self):
+        def _create_spectrum_widgets(type):
             if type == "Emission":
                 swiping_monochromator = self.spec.monochromator
                 stationary_monochromator = self.spec.lamp
-                spectrum_function = get_emission
                 stationary_monochromator_text = 'Emission wavelength (nm):\t\t'
             elif type == "Excitation":
                 swiping_monochromator = self.spec.lamp
                 stationary_monochromator = self.spec.monochromator
-                spectrum_function = get_excitation   
                 stationary_monochromator_text = 'Excitation wavelength (nm):\t\t'
             else:
                 print("ERROR: wrong spectrum type")
 
-            layout = Layout(width='auto')
-            kwargs = {'style':{'description_width':'initial'}, 'layout':layout}
+            layout = widgets.Layout(width='auto')
+            kwargs = {'style':self.style, 'layout':layout}
 
-            integration_time = BoundedFloatText(
+            self.integration_time = widgets.BoundedFloatText(
                 value=0.1, min=0.01,
                 max=10.0,
                 step=0.01,
@@ -116,7 +110,7 @@ class SpectrometerGUI:
                 disabled=False,
                 **kwargs)
 
-            stationary_monochromator_wavelength = BoundedFloatText(
+            self.stationary_monochromator_wavelength = widgets.BoundedFloatText(
                 value=stationary_monochromator.min_wl,
                 min=stationary_monochromator.min_wl,
                 max=stationary_monochromator.max_wl,
@@ -124,7 +118,7 @@ class SpectrometerGUI:
                 disabled=False,
                 **kwargs)
 
-            wavelength_range = FloatRangeSlider(
+            self.wavelength_range = widgets.FloatRangeSlider(
                 value=(swiping_monochromator.min_wl, swiping_monochromator.max_wl),
                 min=swiping_monochromator.min_wl,
                 max=swiping_monochromator.max_wl,
@@ -133,7 +127,7 @@ class SpectrometerGUI:
                 disabled=False,
                 **kwargs)
 
-            wavelength_step = BoundedFloatText(
+            self.wavelength_step = widgets.BoundedFloatText(
                 value=1.0,
                 min=abs(swiping_monochromator.wl_step_ratio),
                 max=10.0,
@@ -142,22 +136,23 @@ class SpectrometerGUI:
                 disabled=False,
                 **kwargs)
 
-            w = interact_manual(spectrum_function,
-                integration_time=integration_time, 
-                counterpart_wavelength=stationary_monochromator_wavelength,
-                wavelength_range=wavelength_range,
-                wavelength_step=wavelength_step,
-                disabled=False,
-                **kwargs)
+            display(self.wavelength_step, self.wavelength_range, self.stationary_monochromator_wavelength, self.integration_time)
+        return _create_spectrum_widgets
 
-            w.widget.children[4].description = "Get Spectrum"
-            display(w)
+    def measure():
+        pass
 
-        type = ["Emission", "Excitation"]
-        spectrum_widgets = interact(create_spectrum_widgets, type=type)
+    def create_gui(self):
+
+        self.style = {'description_width':'initial'}
+
+        type = widgets.Dropdown(options=["Emission", "Excitation"],
+             description="Spectrum type:", style=self.style)
+
+        spectrum_widgets = widgets.interact(self.create_spectrum_widgets(), type=type)
 
         self.initialize_plot()
-        plot_button = interact_manual(self.plot_data)
+        plot_button = widgets.interact_manual(self.plot_data)
         plot_button.widget.children[0].description = "Plot data"
 
         display(spectrum_widgets)

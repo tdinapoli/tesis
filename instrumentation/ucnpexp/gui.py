@@ -6,35 +6,8 @@ import matplotlib.pyplot as plt
 from dataclasses import dataclass
 import datetime
 import pandas as pd
-
-class MonochromatorDummy:
-    def __init__(self, name):
-        self.name = name
-
-    def home(self):
-        print(f"homing {self.name}")
-
-class SpectrometerDummy:
-    def __init__(self):
-        self.monochromator = MonochromatorDummy("monochromator")
-        self.lamp = MonochromatorDummy("lamp")
-        self.min_wl = 250
-        self.max_wl = 750
-
-    def get_emission(self, integration_time, excitation_wavelength,
-        starting_wavelength, ending_wavelength, wavelength_step):
-        print(f"Getting emission spectrum from {starting_wavelength} to {ending_wavelength} with {wavelength_step} steps and {integration_time} integration time, exciting at {excitation_wavelength}.")
-        for wl in np.arange(starting_wavelength, ending_wavelength, wavelength_step):
-            print(f"Measuring at {wl} for {integration_time} seconds, exciting at {excitation_wavelength}.")
-            yield np.random.randint(0, 10)
-
-    def get_excitation(self, integration_time, emission_wavelength,
-        starting_wavelength, ending_wavelength, wavelength_step):
-        print(f"Getting excitation spectrum from {starting_wavelength} to {ending_wavelength} with {wavelength_step} steps and {integration_time} integration time, emitting at {emission_wavelength}.")
-        for wl in np.arange(starting_wavelength, ending_wavelength, wavelength_step):
-            print(f"Measuring at {wl} for {integration_time} seconds, emitting at {emission_wavelength}.")
-            yield np.random.randint(0, 10)
     
+
 @dataclass(frozen=True)
 class Measurement:
     starting_wavelength: float

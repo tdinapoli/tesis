@@ -3,6 +3,7 @@ import ipywidgets as widgets
 from IPython.display import HTML, display, clear_output
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
 from dataclasses import dataclass, asdict
 import json
 import datetime
@@ -50,6 +51,10 @@ class Measurement:
         del self_dict["data"]
         return self_dict
 
+    def plot_line(self, ax, **kwargs):
+        line, = ax.plot(self.data["wavelength"], self.data["counts"]/self.data["integration time"], '-o', **kwargs)
+        return line
+
 class SpectrometerGUI:
     def __init__(self):
         from ucnpexp.instruments import Spectrometer
@@ -58,13 +63,21 @@ class SpectrometerGUI:
         self.spec.lamp.set_wavelength(self.spec.lamp.min_wl)
         self.spec.monochromator.set_wavelength(self.spec.monochromator.min_wl)
         self.measurements = {}
+        self.out = widgets.Output()
         self.style = {'description_width':'initial'}
+        self.lines_on_graph = {}
 
-    def plot_data(self):
-        if self.df is not None:
-            self.ax.plot(self.df["wavelength"], self.df["counts"] / self.df["integration time"], '-o')
-        else:
-            print("No data acquired")
+    def plot_measurement(self):
+        measurement_name = self.measurement_dropdown
+        if measurement_name is not None:
+            measurement = self.measurements[measurement_name]
+            if measurement_name not in self.lines_on_graph.keys():
+                line = measurement.plot_line(self.ax)
+                self.lines_on_graph[measurement_name] = line
+            else:
+                self.lines_on_graph[measurement_name].remove()
+                del self.lines_on_graph[measurement_name]
+        self.update_plot()(measurement_name)
 
     def initialize_plot(self):
         self.figure, self.ax = plt.subplots(figsize=(15,5))
@@ -150,19 +163,35 @@ class SpectrometerGUI:
              self.stationary_monochromator_wavelength_widget, self.integration_time_widget)
         return _display_spectrum_widgets
 
+    def update_plot(self):
+        def _update_plot(measurement_name):
+            if measurement_name is not None:
+                if self.ax.get_legend():
+                    self.ax.get_legend().remove()
+                measurement = self.measurements[measurement_name]
+                self.ax.set_title(f"{measurement.spectrum_type} Spectrum\n $\lambda=${measurement.stationary_monochromator_wavelength}\nIntegration time:{measurement.integration_time}")
+                for name in self.lines_on_graph:
+                    self.lines_on_graph[name].set_label(name)
+                self.ax.legend()
+
+        return _update_plot
+
     def display_measurement_widgets(self):
 
         self.measure_button_widget = widgets.Button(description="Measure")
         self.measure_button_widget.on_click(self.measure)
 
-        def print_data(measurement_name):
+        def select_data(measurement_name):
             if measurement_name is not None:
                 df = self.measurements[measurement_name].data
-                display(df)
+
+        self.measurement_file_chooser_widget = ipyfilechooser.FileChooser()
+        self.measurement_file_chooser_widget.default_path = "/home/tomi/HORIBA/measurements"
+        self.measurement_file_chooser_widget.title = "Measurement name:"
 
         self.measurement_dropdown_widget = widgets.Dropdown(options=[name for name in self.measurements],
                                                             style=self.style)
-        self.measurement_dropdown_interact = widgets.interact(print_data, measurement_name=self.measurement_dropdown_widget,
+        self.measurement_dropdown_interact = widgets.interact(self.update_plot(), measurement_name=self.measurement_dropdown_widget,
                           style=self.style)
         self.measurement_dropdown_interact.widget.children[0].description = "Measurements:"
         
@@ -174,19 +203,13 @@ class SpectrometerGUI:
         self.save_measurement_widget = widgets.Button(description="Save measurement")
         self.save_measurement_widget.on_click(self.save_measurement)
 
-        self.measurement_file_chooser_widget = ipyfilechooser.FileChooser()
-        self.measurement_file_chooser_widget.default_path = "/home/tomi/HORIBA/measurements"
-        self.measurement_file_chooser_widget.title = "Measurement file:"
-
-        display(self.measure_button_widget,
+        display(self.measurement_file_chooser_widget, self.measure_button_widget,
              self.measurement_dropdown_interact, self.file_format_widget,
-            self.measurement_file_chooser_widget, self.save_measurement_widget)
+            self.save_measurement_widget)
 
     def save_measurement(self, widget_placeholder):
         if self.measurement_file_format == "Excel":
-            print(f"saving to xl at {self.measurement_file_chooser_widget.selected}.xlsx" )
             self.measurements[self.measurement_dropdown].to_excel(f"{self.measurement_file_chooser_widget.selected}")
-            print("saved")
         elif self.measurement_file_format == "csv":
             self.measurements[self.measurement_dropdown].to_csv(f"{self.measurement_file_chooser_widget.selected}")
         elif self.measurement_file_format == "pickle":
@@ -215,9 +238,9 @@ class SpectrometerGUI:
         }
         measurement = Measurement(**measurement_data)
         self.measurements[measurement.name] = measurement
-        self.plot_data()
         self.measurement_dropdown_widget.options = [name for name in self.measurements]
         self.measurement_dropdown_widget.value = measurement.name
+        self.plot_measurement()
         self.measurement_file_chooser_widget.reset(filename=measurement.name)
         self.disable_widgets(False, do_not_disable=["spectrum_type_widget"])
 
@@ -233,7 +256,6 @@ class SpectrometerGUI:
     @property
     def gui_widgets(self):
         lista = [w for attr, w in vars(self).items() if attr.endswith("widget")] 
-        print(lista)
         return lista
 
     @property
@@ -282,7 +304,7 @@ class SpectrometerGUI:
         display(spectrum_widgets)
         self.display_measurement_widgets()
         self.initialize_plot()
-        self.plot_button_widget = widgets.interact_manual(self.plot_data)
+        self.plot_button_widget = widgets.interact_manual(self.plot_measurement)
         self.plot_button_widget.widget.children[0].description = "Plot data"
 
 if __name__ == "__main__":

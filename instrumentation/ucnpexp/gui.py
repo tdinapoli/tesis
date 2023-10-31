@@ -60,8 +60,10 @@ class SpectrometerGUI:
         from ucnpexp.instruments import Spectrometer
         self.df = None
         self.spec = Spectrometer.constructor_default()
-        self.spec.lamp.set_wavelength(self.spec.lamp.min_wl)
-        self.spec.monochromator.set_wavelength(self.spec.monochromator.min_wl)
+        #self.spec.lamp.set_wavelength(self.spec.lamp.min_wl)
+        #self.spec.monochromator.set_wavelength(self.spec.monochromator.min_wl)
+        self.spec.lamp.set_wavelength(289.5)
+        self.spec.monochromator.set_wavelength(747)
         self.measurements = {}
         self.out = widgets.Output()
         self.style = {'description_width':'initial'}
@@ -114,11 +116,11 @@ class SpectrometerGUI:
             if type == "Emission":
                 swiping_monochromator = self.spec.monochromator
                 stationary_monochromator = self.spec.lamp
-                stationary_monochromator_text = 'Emission wavelength (nm):\t\t'
+                stationary_monochromator_text = 'Excitation wavelength (nm):\t\t'
             elif type == "Excitation":
                 swiping_monochromator = self.spec.lamp
                 stationary_monochromator = self.spec.monochromator
-                stationary_monochromator_text = 'Excitation wavelength (nm):\t\t'
+                stationary_monochromator_text = 'Emission wavelength (nm):\t\t'
             else:
                 print("ERROR: wrong spectrum type")
 
@@ -169,9 +171,14 @@ class SpectrometerGUI:
                 if self.ax.get_legend():
                     self.ax.get_legend().remove()
                 measurement = self.measurements[measurement_name]
-                self.ax.set_title(f"{measurement.spectrum_type} Spectrum\n $\lambda=${measurement.stationary_monochromator_wavelength}\nIntegration time:{measurement.integration_time}")
+                self.ax.set_title(f"{measurement.spectrum_type} Spectrum, $\lambda=${measurement.stationary_monochromator_wavelength}, Integration time:{measurement.integration_time}")
+                min_wl = measurement.data["wavelength"].min()
+                max_wl = measurement.data["wavelength"].max()
                 for name in self.lines_on_graph:
                     self.lines_on_graph[name].set_label(name)
+                    min_wl = self.measurements[name].data["wavelength"].min() if self.measurements[name].data["wavelength"].min() < min_wl else min_wl
+                    max_wl = self.measurements[name].data["wavelength"].max() if self.measurements[name].data["wavelength"].max() > max_wl else max_wl
+                self.ax.set_xlim([min_wl-1, max_wl+1])
                 self.ax.legend()
 
         return _update_plot
@@ -305,7 +312,7 @@ class SpectrometerGUI:
         self.display_measurement_widgets()
         self.initialize_plot()
         self.plot_button_widget = widgets.interact_manual(self.plot_measurement)
-        self.plot_button_widget.widget.children[0].description = "Plot data"
+        self.plot_button_widget.widget.children[0].description = "Plot measurement"
 
 if __name__ == "__main__":
     app = SpectrometerGUI()

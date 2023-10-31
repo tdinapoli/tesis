@@ -324,9 +324,9 @@ class Monochromator:
         while self.limit_switch.state and steps_done < steps_limit:
             self._motor.rotate_step(1, not self._greater_wl_cw)
             steps_done += 1
-        if set_wavelength and steps_done < steps_limit:
+        if set_wavelength:# and steps_done < steps_limit:
             self.set_wavelength(self.home_wavelength)
-        elif steps_done < steps_limit:
+        elif steps_done >= steps_limit:
             print("Danger warning:")
             print(f"Wavelength could not be set. Call home method again if and only if wavelength is greater than {self.home_wavelength}")
         
@@ -337,7 +337,8 @@ class Spectrometer(abstract.Spectrometer):
                   osc: OscilloscopeChannel,
                   lamp: Monochromator,
                   monochromator_calibration_path = None,
-                  lamp_calibration_path = None):
+                  lamp_calibration_path = None,
+                  conn = None):
         self.monochromator = monochromator
         self._osc = osc
         self.lamp = lamp
@@ -346,9 +347,16 @@ class Spectrometer(abstract.Spectrometer):
         if lamp_calibration_path:
             self.lamp.load_calibration(lamp_calibration_path)
 
+
     @classmethod
-    def constructor_default(cls, conn, MONOCHROMATOR=Monochromator,
+    def constructor_default(cls, conn = None, MONOCHROMATOR=Monochromator,
                              OSCILLOSCOPE_CHANNEL=OscilloscopeChannel):
+        if not conn:
+            try:
+                conn = rpyc.connect('rp-f05512.local', port=18861)
+            except Exception as e:
+                print(e)
+                print("Connection to 'rp-f05512.local' at port 18861")
         monochromator = MONOCHROMATOR.constructor_default(conn,
                         pin_step=4, pin_direction=5, limit_switch=3)
         osc = OSCILLOSCOPE_CHANNEL(conn, channel=0, voltage_range=20.0,
@@ -388,7 +396,7 @@ class Spectrometer(abstract.Spectrometer):
                        iterator: bool = False, **kwargs):
         if emission_wavelength:
             self.monochromator.goto_wavelength(emission_wavelength)
-        spectrum_iterator  = self._get_spectrum(monochromator=self.lamp,
+        spectrum_iterator = self._get_spectrum(monochromator=self.lamp,
                                                 integration_time=integration_time,
                                                 **kwargs)
         if iterator:
@@ -447,7 +455,7 @@ class Spectrometer(abstract.Spectrometer):
     # Esto tiene que contar fotones cuando lo calibre bien
     def _count_photons(self, osc_screen):
         # La altura hay que calibrarla
-        times, heights = sp.signal.find_peaks(osc_screen, height=(0.16, 1))
+        times, heights = sp.signal.find_peaks(-osc_screen, height=(-3.5, 1))
         return len(times)
         # return osc_screen
 

@@ -1,3 +1,0 @@
-
-usar las clases FluorescentSystem y FluorescenceTransition para escribir una función que dibuje diagramas de Jablonski y el espectro
-

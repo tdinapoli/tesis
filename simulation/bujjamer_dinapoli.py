@@ -1,29 +1,12 @@
-from poincare import Simulator, System, Variable, Parameter, assign, initial
-import numpy as np
-import matplotlib.pyplot as plt 
-import pandas as pd
 from jablonski.types import FluorescentSystem, State, initial
 from jablonski.transitions import FluorescenceTransition, StateAbsorption
 from jablonski.transitions import EnergyTransferUpconversion as ETU
+from poincare import Parameter, assign, Simulator, Independent, Variable
 import pint
+import numpy as np
+import pandas as pd
 
 ureg = pint.get_application_registry()
-
-class Pollnau(FluorescentSystem):
-    N0: State = initial(0, default=0)
-    N1: State = initial(490 * ureg.nm, default=0)
-    N2: State = initial(980 * ureg.nm, default=0)
-
-    excitation: Parameter = assign(default=1)
-    sigma0: Parameter = assign(default=1)
-    sigma1: Parameter = assign(default=1)
-    k1: Parameter = assign(default=1)
-    k2: Parameter = assign(default=1)
-    W1: Parameter = assign(default=1)
-
-    n0 = N0.derive() << 0
-    n1 = N1.derive() << sigma0 * N0 * excitation - k1 * N1 -2 * W1 * N1**2 - sigma1 * excitation * N1
-    n2 = N2.derive() << - k2 * N2 + W1 * N1**2 + sigma1 * excitation * N1
 
 class Example(FluorescentSystem):
     N0: State = initial(0, default=1_000)
@@ -31,17 +14,17 @@ class Example(FluorescentSystem):
     N2: State = initial(980 * ureg.nm, default=0)
     #t: Independent()
 
-    excitation: Parameter = assign(default=0)
+    laser: Parameter = assign(default=0)
     sigma0: Parameter = assign(default=0)
     sigma1: Parameter = assign(default=0)
     k1: Parameter = assign(default=0)
     k2: Parameter = assign(default=0)
-    W1: Parameter = assign(default=0)
+    ketu: Parameter = assign(default=0)
 
     N1N0 = FluorescenceTransition(ground=N0, excited=N1, rate=k1)
-    N0N1 = StateAbsorption(ground=N0, excited=N1, rate=excitation * sigma0)
-    N1etuN2 = ETU(sensitizer=N1, activator=N2, relaxator=N0, rate=W1)
-    N1esaN2 = StateAbsorption(ground=N1, excited=N2, rate=excitation * sigma1)
+    N0N1 = StateAbsorption(ground=N0, excited=N1, rate=laser * sigma0)
+    N1etuN2 = ETU(sensitizer=N1, activator=N2, relaxator=N0, rate=ketu)
+    N1esaN2 = StateAbsorption(ground=N1, excited=N2, rate=laser * sigma1)
     #N2N1 = FluorescenceTransition(ground=N1, excited=N2, rate=1)
     N2N0 = FluorescenceTransition(ground=N0, excited=N2, rate=k2)
 

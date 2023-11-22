@@ -1,0 +1,49 @@
+initials:
+parameters:
+  non_ratdiative:
+    kNR3: 320
+    kNR2: 0
+    kNR4: 2.29e4
+    kNR5: 0
+    kNR6: 35
+    kNR7: 1e6
+    kNR8: 4.25e4
+    kNR9: 1.06e6
+  energy_transfer:
+    kET1_3: 0.11e-15
+    kET2_5: 0.0e-15
+    kET3_1: 2.51e-15
+    kET3_7: 2.51e-15
+    kET5_8: 9.44e-15 
+    kET6_9: 0.79e-15
+    kET7_3: 2.15e-16
+    kET9_5: 3.55e-16
+  relaxation:
+    kR2: 108
+    kR3: 100
+    kR5: 2191
+    kR6: 1245
+    kR8: 2379
+    kYb: 625
+  cross_relaxation:
+    kCR4: 8.89e-19
+    kCR6: 3.36e-17
+    kCR9: 1.78e-15
+  upconversion:
+    kUC2: 6.54e-18
+    kUC5: 7.89e-15
+  cross_sections:
+    sigma_yb: Parameter = assign(default=0)
+    sigma_er: Parameter = assign(default=0)
+  laser_power:
+    excitation: Parameter = assign(default=0)
+variables:
+  n1: 0
+  n2: 0  
+  n3: 0
+  n4: 0
+  n5: 0
+  n6: 0
+  n7: 0
+  n8: 0
+  n9: 0

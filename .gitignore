@@ -4,3 +4,7 @@ __pycache__/
 
 data/
 images/
+# pixi environments
+.pixi
+*.egg-info
+*.pickle

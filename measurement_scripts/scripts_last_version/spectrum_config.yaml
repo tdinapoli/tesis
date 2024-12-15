@@ -1,0 +1,5 @@
+starting_wl: 535
+ending_wl: 571
+wl_step: 1
+integration_times: [1, 1, 1, 1, 1, 1, 1, 1]
+currents: !!python/tuple [0.05      , 0.0556325 , 0.06189951, 0.0688725 , 0.07663099, 0.08526348, 0.09486842]

@@ -1,0 +1,4 @@
+wavelengths: !!python/tuple [550, 654, 662]
+currents: !!python/tuple [0.3]
+amount_buffers: !!python/tuple [300]
+max_delay: 3
